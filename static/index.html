@@ -1,1322 +1,998 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IncidentOS — BitShift | OpenEnv</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Incident Response — BitShift</title>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0f0f11;--surface:rgba(255,255,255,0.04);--surface2:rgba(255,255,255,0.07);
-  --primary:#6366f1;--primary-dim:rgba(99,102,241,0.15);--primary-border:rgba(99,102,241,0.4);
-  --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;--orange:#f97316;
-  --text:#f1f5f9;--muted:#64748b;--border:rgba(255,255,255,0.08);
-  --radius:12px;--radius-sm:8px;--shadow:0 0 0 1px rgba(255,255,255,0.05),0 4px 24px rgba(0,0,0,0.4);
-  --transition:0.2s ease;
-}
-html,body{height:100%;overflow:hidden}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
-body::before{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 10%,rgba(99,102,241,0.08) 0%,transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%,rgba(139,92,246,0.06) 0%,transparent 60%),
-    radial-gradient(ellipse 40% 30% at 60% 30%,rgba(34,197,94,0.04) 0%,transparent 50%);
-}
-#app{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh}
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --orange: #f97316;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --p1: #ef4444;
+    --p2: #f97316;
+    --p3: #f59e0b;
+    --p4: #10b981;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-/* NAVBAR */
-.navbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 20px;height:52px;
-  border-bottom:1px solid var(--border);
-  background:rgba(15,15,17,0.8);backdrop-filter:blur(12px);
-  flex-shrink:0;
-}
-.nav-left{display:flex;align-items:center;gap:10px}
-.logo{font-size:15px;font-weight:700;letter-spacing:-0.3px;color:var(--text)}
-.logo span{color:var(--primary)}
-.badge-env{
-  font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;
-  background:var(--primary-dim);color:var(--primary);border:1px solid var(--primary-border);
-  letter-spacing:0.3px;
-}
-.nav-right{display:flex;align-items:center;gap:16px}
-.live-clock{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.live-indicator{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text)}
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+  /* ── Animated background grid ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridPulse 8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes gridPulse {
+    0%,100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
 
-/* MAIN LAYOUT */
-.main{display:flex;flex:1;overflow:hidden}
+  /* ── Floating particles ── */
+  .particles { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .particle {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: float linear infinite;
+    opacity: 0;
+  }
+  @keyframes float {
+    0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.6; }
+    100% { transform: translateY(-10vh) translateX(40px); opacity: 0; }
+  }
 
-/* SIDEBAR */
-.sidebar{
-  width:260px;flex-shrink:0;border-right:1px solid var(--border);
-  display:flex;flex-direction:column;overflow:hidden;
-}
-.sidebar-header{
-  padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;
-  border-bottom:1px solid var(--border);flex-shrink:0;
-}
-.sidebar-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted)}
-.count-badge{
-  font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;
-  background:var(--surface2);color:var(--muted);border:1px solid var(--border);
-}
-.task-list{flex:1;overflow-y:auto;padding:8px}
-.task-list::-webkit-scrollbar{width:4px}
-.task-list::-webkit-scrollbar-track{background:transparent}
-.task-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+  /* ── Layout ── */
+  .app { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
 
-.task-card{
-  padding:11px 12px;border-radius:var(--radius-sm);cursor:pointer;margin-bottom:4px;
-  border:1px solid transparent;transition:all var(--transition);
-  background:transparent;
-}
-.task-card:hover{background:var(--surface);border-color:var(--border)}
-.task-card.active{
-  background:var(--primary-dim);border-color:var(--primary-border);
-  border-left:3px solid var(--primary);
-}
-.task-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
-.task-desc{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px}
-.task-meta{display:flex;align-items:center;justify-content:space-between}
-.diff-pill{
-  font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:0.3px;
-}
-.diff-easy{background:rgba(34,197,94,0.15);color:var(--success);border:1px solid rgba(34,197,94,0.3)}
-.diff-medium{background:rgba(245,158,11,0.15);color:var(--warning);border:1px solid rgba(245,158,11,0.3)}
-.diff-hard{background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.3)}
-.diff-special{background:var(--primary-dim);color:var(--primary);border:1px solid var(--primary-border)}
-.alert-count{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:3px}
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, rgba(17,24,39,0.95), rgba(26,34,53,0.95));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(12px);
+    animation: slideDown 0.5s ease;
+  }
+  @keyframes slideDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
+  }
+  .logo h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: -0.5px; }
+  .logo span { font-size: 0.75rem; color: var(--muted); }
+  .header-stats { display: flex; gap: 16px; }
+  .stat-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 0.8rem;
+  }
+  .stat-pill .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
-/* CENTER */
-.center{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  /* ── Task selector ── */
+  .task-bar {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 20px;
+    animation: fadeIn 0.6s ease 0.1s both;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
+  .task-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .task-btn::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .task-btn:hover { border-color: var(--accent); color: var(--text); transform: translateY(-1px); }
+  .task-btn.active {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(6,182,212,0.2));
+    color: var(--text);
+    box-shadow: 0 0 12px rgba(59,130,246,0.3);
+  }
 
-/* EMPTY STATE */
-.empty-state{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
-  color:var(--muted);
-}
-.empty-icon{font-size:40px;opacity:0.4}
-.empty-text{font-size:14px;font-weight:500}
-.empty-sub{font-size:12px;opacity:0.7}
+  /* ── Main grid ── */
+  .grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+  @media(max-width:800px) { .grid { grid-template-columns: 1fr; } }
 
-/* TASK VIEW */
-.task-view{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  /* ── Cards ── */
+  .card {
+    background: linear-gradient(135deg, var(--surface), var(--surface2));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    animation: fadeIn 0.5s ease both;
+  }
+  .card-title {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title .icon { font-size: 1rem; }
 
-/* TOP BAR */
-.task-topbar{
-  padding:12px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
-  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
-}
-.breadcrumb{font-size:12px;color:var(--muted);flex-shrink:0}
-.breadcrumb span{color:var(--text);font-weight:500}
-.progress-wrap{flex:1;min-width:120px;display:flex;align-items:center;gap:8px}
-.progress-bar{flex:1;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden}
-.progress-fill{height:100%;background:var(--primary);border-radius:2px;transition:width 0.4s ease}
-.step-counter{font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0}
-.streak-badge{
-  font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;
-  background:rgba(245,158,11,0.15);color:var(--warning);border:1px solid rgba(245,158,11,0.3);
-  flex-shrink:0;
-}
+  /* ── Alert display ── */
+  .alert-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+  .alert-box.new-alert {
+    animation: alertIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes alertIn {
+    from { opacity:0; transform:scale(0.95) translateY(-10px); }
+    to { opacity:1; transform:scale(1) translateY(0); }
+  }
+  .alert-box::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, var(--accent), var(--accent2));
+    border-radius: 3px 0 0 3px;
+  }
+  .alert-source {
+    font-size: 0.7rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px;
+  }
+  .alert-title { font-size: 1rem; font-weight: 600; margin-bottom: 8px; line-height: 1.4; }
+  .alert-body { font-size: 0.85rem; color: #94a3b8; line-height: 1.6; }
+  .alert-meta {
+    display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .badge {
+    padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .badge-step { background: rgba(59,130,246,0.15); color: var(--accent); border: 1px solid rgba(59,130,246,0.3); }
+  .badge-task { background: rgba(6,182,212,0.15); color: var(--accent2); border: 1px solid rgba(6,182,212,0.3); }
 
-/* SCROLLABLE CENTER CONTENT */
-.center-scroll{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
-.center-scroll::-webkit-scrollbar{width:4px}
-.center-scroll::-webkit-scrollbar-track{background:transparent}
-.center-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+  /* ── Progress bar ── */
+  .progress-wrap { margin-bottom: 16px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
+  .progress-track {
+    height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+  }
+  .progress-fill::after {
+    content: '';
+    position: absolute; right: 0; top: 0; bottom: 0;
+    width: 20px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3));
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0%,100%{opacity:0;} 50%{opacity:1;} }
 
-/* CARDS */
-.card{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  box-shadow:var(--shadow);backdrop-filter:blur(8px);
-}
+  /* ── Form ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label { font-size: 0.72rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  select, textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    width: 100%;
+  }
+  select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  .fp-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+  }
+  .fp-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 
-/* ALERT CARD */
-.alert-card{padding:16px;position:relative}
-.alert-card.noisy{border-color:rgba(239,68,68,0.3)}
-.alert-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-.source-badge{
-  font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;
-  background:rgba(255,255,255,0.08);color:var(--text);border:1px solid var(--border);
-}
-.alert-ts{font-size:11px;color:var(--muted);margin-left:auto}
-.sev-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.noise-badge{
-  font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;
-  background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.3);
-  margin-left:auto;
-}
-.alert-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;line-height:1.3}
-.alert-body{
-  font-size:12px;color:var(--muted);line-height:1.6;max-height:120px;overflow-y:auto;
-  font-family:'SF Mono','Fira Code',monospace;
-}
-.alert-body::-webkit-scrollbar{width:3px}
-.alert-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1)}
-.cascade-banner{
-  margin-top:10px;padding:8px 12px;border-radius:var(--radius-sm);
-  background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);
-  font-size:11px;color:var(--warning);display:flex;align-items:flex-start;gap:6px;
-}
+  /* ── Severity selector ── */
+  .sev-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-bottom: 12px; }
+  .sev-btn {
+    padding: 8px 4px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--muted); cursor: pointer;
+    font-size: 0.8rem; font-weight: 700; text-align: center;
+    transition: all 0.2s;
+  }
+  .sev-btn:hover { transform: translateY(-2px); }
+  .sev-btn.active-P1 { background: rgba(239,68,68,0.2); border-color: var(--p1); color: var(--p1); box-shadow: 0 0 10px rgba(239,68,68,0.3); }
+  .sev-btn.active-P2 { background: rgba(249,115,22,0.2); border-color: var(--p2); color: var(--p2); box-shadow: 0 0 10px rgba(249,115,22,0.3); }
+  .sev-btn.active-P3 { background: rgba(245,158,11,0.2); border-color: var(--p3); color: var(--p3); box-shadow: 0 0 10px rgba(245,158,11,0.3); }
+  .sev-btn.active-P4 { background: rgba(16,185,129,0.2); border-color: var(--p4); color: var(--p4); box-shadow: 0 0 10px rgba(16,185,129,0.3); }
 
-/* DEBRIEF CARD */
-.debrief-card{padding:14px;animation:slideIn 0.25s ease}
-@keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-.debrief-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.debrief-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
-.reward-big{font-size:22px;font-weight:700}
-.reward-perfect{color:var(--success)}
-.reward-good{color:var(--warning)}
-.reward-bad{color:var(--danger)}
-.breakdown-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.breakdown-chip{
-  font-size:11px;font-weight:500;padding:3px 9px;border-radius:6px;
-  display:flex;align-items:center;gap:4px;
-}
-.chip-perfect{background:rgba(34,197,94,0.15);color:var(--success);border:1px solid rgba(34,197,94,0.25)}
-.chip-partial{background:rgba(245,158,11,0.15);color:var(--warning);border:1px solid rgba(245,158,11,0.25)}
-.chip-wrong{background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.25)}
-.explain-lines{display:flex;flex-direction:column;gap:4px}
-.explain-line{font-size:12px;color:var(--muted);padding-left:8px;border-left:2px solid var(--border)}
+  /* ── Submit button ── */
+  .btn-submit {
+    width: 100%; padding: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: 10px;
+    color: #fff; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59,130,246,0.4); }
+  .btn-submit:active { transform: translateY(0); }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-submit .ripple {
+    position: absolute; border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    transform: scale(0);
+    animation: ripple 0.6s linear;
+    pointer-events: none;
+  }
+  @keyframes ripple { to { transform: scale(4); opacity: 0; } }
 
-/* ACTION PANEL */
-.action-card{padding:16px}
-.action-section{margin-bottom:14px}
-.action-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
-.pill-group{display:flex;flex-wrap:wrap;gap:6px}
-.pill-btn{
-  font-size:12px;font-weight:500;padding:5px 12px;border-radius:20px;cursor:pointer;
-  border:1px solid var(--border);background:transparent;color:var(--muted);
-  transition:all var(--transition);white-space:nowrap;
-}
-.pill-btn:hover{border-color:rgba(255,255,255,0.2);color:var(--text);background:var(--surface2)}
-.pill-btn.selected{color:var(--text);font-weight:600}
-.pill-p1.selected{background:rgba(239,68,68,0.2);border-color:rgba(239,68,68,0.5);color:#fca5a5}
-.pill-p2.selected{background:rgba(249,115,22,0.2);border-color:rgba(249,115,22,0.5);color:#fdba74}
-.pill-p3.selected{background:rgba(234,179,8,0.2);border-color:rgba(234,179,8,0.5);color:#fde047}
-.pill-p4.selected{background:rgba(100,116,139,0.2);border-color:rgba(100,116,139,0.5);color:#94a3b8}
-.pill-type.selected,.pill-team.selected{background:var(--primary-dim);border-color:var(--primary-border);color:#a5b4fc}
+  /* ── Result feedback ── */
+  .result-box {
+    border-radius: 12px; padding: 14px;
+    margin-top: 14px;
+    border: 1px solid;
+    animation: resultIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    display: none;
+  }
+  @keyframes resultIn { from{opacity:0;transform:scale(0.9);} to{opacity:1;transform:scale(1);} }
+  .result-box.show { display: block; }
+  .result-box.good { background: rgba(16,185,129,0.1); border-color: var(--green); }
+  .result-box.partial { background: rgba(245,158,11,0.1); border-color: var(--yellow); }
+  .result-box.bad { background: rgba(239,68,68,0.1); border-color: var(--red); }
+  .result-score {
+    font-size: 1.8rem; font-weight: 800; margin-bottom: 4px;
+    background: linear-gradient(135deg, #fff, #94a3b8);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .result-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
+  .breakdown { display: flex; gap: 6px; flex-wrap: wrap; }
+  .bd-chip {
+    padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 600;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .bd-chip.ok { background: rgba(16,185,129,0.2); color: var(--green); }
+  .bd-chip.partial { background: rgba(245,158,11,0.2); color: var(--yellow); }
+  .bd-chip.fail { background: rgba(239,68,68,0.2); color: var(--red); }
 
-.status-textarea{
-  width:100%;padding:10px 12px;border-radius:var(--radius-sm);
-  background:rgba(255,255,255,0.03);border:1px solid var(--border);
-  color:var(--text);font-family:'Inter',sans-serif;font-size:12px;
-  resize:vertical;min-height:72px;outline:none;transition:border-color var(--transition);
-}
-.status-textarea:focus{border-color:var(--primary-border)}
-.status-textarea::placeholder{color:var(--muted)}
+  /* ── Right panel ── */
+  .right-panel { display: flex; flex-direction: column; gap: 16px; }
 
-.fp-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
-.fp-label{font-size:12px;color:var(--text)}
-.toggle{position:relative;width:36px;height:20px;cursor:pointer}
-.toggle input{opacity:0;width:0;height:0}
-.toggle-slider{
-  position:absolute;inset:0;border-radius:10px;background:rgba(255,255,255,0.1);
-  border:1px solid var(--border);transition:all var(--transition);
-}
-.toggle-slider::before{
-  content:'';position:absolute;width:14px;height:14px;border-radius:50%;
-  background:var(--muted);top:2px;left:2px;transition:all var(--transition);
-}
-.toggle input:checked + .toggle-slider{background:rgba(239,68,68,0.3);border-color:rgba(239,68,68,0.5)}
-.toggle input:checked + .toggle-slider::before{transform:translateX(16px);background:var(--danger)}
+  /* ── Streak counter ── */
+  .streak-card {
+    text-align: center; padding: 20px;
+    background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(6,182,212,0.1));
+    border: 1px solid rgba(59,130,246,0.3);
+    border-radius: 16px;
+  }
+  .streak-num {
+    font-size: 3rem; font-weight: 900; line-height: 1;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    transition: all 0.3s;
+  }
+  .streak-num.bump { animation: bump 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+  @keyframes bump { 0%{transform:scale(1);} 50%{transform:scale(1.3);} 100%{transform:scale(1);} }
+  .streak-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+  .streak-best { font-size: 0.8rem; color: var(--accent2); margin-top: 6px; }
 
-.action-bottom{display:flex;flex-direction:column;gap:8px;margin-top:4px}
-.btn-primary{
-  width:100%;padding:10px;border-radius:var(--radius-sm);
-  background:var(--primary);color:#fff;font-size:13px;font-weight:600;
-  border:none;cursor:pointer;transition:all var(--transition);letter-spacing:0.1px;
-}
-.btn-primary:hover{background:#5558e8;box-shadow:0 0 20px rgba(99,102,241,0.3)}
-.btn-primary:disabled{opacity:0.4;cursor:not-allowed}
-.btn-ghost{
-  width:100%;padding:9px;border-radius:var(--radius-sm);
-  background:transparent;color:var(--muted);font-size:12px;font-weight:500;
-  border:1px solid var(--border);cursor:pointer;transition:all var(--transition);
-}
-.btn-ghost:hover{border-color:rgba(255,255,255,0.2);color:var(--text)}
+  /* ── Hint box ── */
+  .hint-box {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 12px; padding: 14px;
+    font-size: 0.82rem; line-height: 1.6; color: #fcd34d;
+    position: relative;
+    display: none;
+  }
+  .hint-box.show { display: block; animation: fadeIn 0.3s ease; }
+  .hint-icon { font-size: 1.2rem; margin-bottom: 6px; display: block; }
 
-/* HINT CARD */
-.hint-card{
-  padding:12px 14px;border-radius:var(--radius-sm);
-  background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);
-  display:flex;align-items:flex-start;gap:10px;animation:slideIn 0.2s ease;
-}
-.hint-icon{font-size:14px;flex-shrink:0;margin-top:1px}
-.hint-text{font-size:12px;color:var(--warning);flex:1;line-height:1.5}
-.hint-close{
-  background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;
-  padding:0;flex-shrink:0;transition:color var(--transition);
-}
-.hint-close:hover{color:var(--text)}
+  /* ── Timeline ── */
+  .timeline { max-height: 280px; overflow-y: auto; }
+  .timeline::-webkit-scrollbar { width: 4px; }
+  .timeline::-webkit-scrollbar-track { background: var(--bg); }
+  .timeline::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .tl-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+    animation: fadeIn 0.3s ease;
+  }
+  .tl-item:last-child { border-bottom: none; }
+  .tl-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .tl-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .tl-dot.partial { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .tl-dot.fail { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .tl-title { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tl-score { color: var(--muted); flex-shrink: 0; }
 
-/* EPISODE COMPLETE */
-.complete-card{padding:24px;text-align:center;animation:slideIn 0.3s ease}
-.complete-icon{font-size:36px;margin-bottom:8px}
-.complete-title{font-size:18px;font-weight:700;margin-bottom:4px}
-.complete-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
-.grade-display{
-  font-size:48px;font-weight:800;margin-bottom:4px;
-  background:linear-gradient(135deg,var(--primary),#a78bfa);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-}
-.score-display{font-size:14px;color:var(--muted);margin-bottom:20px}
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
-.stat-box{
-  padding:10px;border-radius:var(--radius-sm);background:var(--surface2);
-  border:1px solid var(--border);
-}
-.stat-val{font-size:18px;font-weight:700;color:var(--text)}
-.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
+  /* ── Leaderboard ── */
+  .lb-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    animation: fadeIn 0.3s ease;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { width: 24px; text-align: center; color: var(--muted); font-weight: 700; }
+  .lb-rank.gold { color: #fbbf24; }
+  .lb-rank.silver { color: #94a3b8; }
+  .lb-rank.bronze { color: #b45309; }
+  .lb-name { flex: 1; font-weight: 500; }
+  .lb-score { color: var(--accent2); font-weight: 700; }
+  .lb-grade { padding: 2px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; background: rgba(59,130,246,0.15); color: var(--accent); }
 
-/* RIGHT PANEL */
-.right-panel{
-  width:320px;flex-shrink:0;border-left:1px solid var(--border);
-  display:flex;flex-direction:column;overflow:hidden;
-}
-.tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.tab-btn{
-  flex:1;padding:12px 8px;font-size:12px;font-weight:500;color:var(--muted);
-  background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;
-  transition:all var(--transition);
-}
-.tab-btn:hover{color:var(--text)}
-.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
-.tab-content{flex:1;overflow-y:auto;padding:12px}
-.tab-content::-webkit-scrollbar{width:4px}
-.tab-content::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+  /* ── Done overlay ── */
+  .done-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(10,14,26,0.92);
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    display: none;
+  }
+  .done-overlay.show { display: flex; animation: fadeIn 0.4s ease; }
+  .done-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 40px;
+    text-align: center; max-width: 420px; width: 90%;
+    animation: resultIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .done-emoji { font-size: 4rem; margin-bottom: 16px; display: block; }
+  .done-score {
+    font-size: 3.5rem; font-weight: 900;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .done-label { color: var(--muted); margin: 8px 0 20px; }
+  .done-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn-secondary {
+    padding: 10px 20px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); cursor: pointer; font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); }
 
-/* ACTIVITY */
-.step-log-card{
-  padding:10px 12px;border-radius:var(--radius-sm);background:var(--surface);
-  border:1px solid var(--border);margin-bottom:6px;
-}
-.step-log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.step-num{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase}
-.step-reward{font-size:13px;font-weight:700}
-.step-chips{display:flex;flex-wrap:wrap;gap:4px}
-.step-chip{
-  font-size:10px;padding:2px 6px;border-radius:4px;
-  background:rgba(255,255,255,0.06);color:var(--muted);border:1px solid var(--border);
-}
-.export-btn{
-  width:100%;margin-top:8px;padding:9px;border-radius:var(--radius-sm);
-  background:var(--surface2);color:var(--muted);font-size:12px;font-weight:500;
-  border:1px solid var(--border);cursor:pointer;transition:all var(--transition);
-}
-.export-btn:hover{border-color:rgba(255,255,255,0.2);color:var(--text)}
+  /* ── Save score form ── */
+  .save-form { display: flex; gap: 8px; margin-top: 16px; }
+  .save-form input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); padding: 8px 12px;
+    font-size: 0.85rem; outline: none;
+  }
+  .save-form input:focus { border-color: var(--accent); }
+  .btn-save {
+    padding: 8px 16px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59,130,246,0.4); }
 
-/* ANALYTICS */
-.stat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
-.stat-row:last-child{border-bottom:none}
-.stat-row-label{font-size:12px;color:var(--muted)}
-.stat-row-val{font-size:13px;font-weight:600;color:var(--text)}
-.chart-section{margin-top:14px}
-.chart-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
-.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-.bar-label{font-size:11px;color:var(--muted);width:70px;flex-shrink:0;text-align:right}
-.bar-track{flex:1;height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
-.bar-fill{height:100%;border-radius:3px;background:var(--primary);transition:width 0.5s ease}
-.bar-pct{font-size:10px;color:var(--muted);width:30px;flex-shrink:0}
-.btn-timeline{
-  width:100%;margin-top:12px;padding:9px;border-radius:var(--radius-sm);
-  background:var(--primary-dim);color:var(--primary);font-size:12px;font-weight:500;
-  border:1px solid var(--primary-border);cursor:pointer;transition:all var(--transition);
-}
-.btn-timeline:hover{background:rgba(99,102,241,0.25)}
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 200;
+    padding: 12px 20px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 0.85rem; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    max-width: 300px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
 
-/* LEADERBOARD */
-.filter-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-.filter-pill{
-  font-size:11px;padding:3px 10px;border-radius:10px;cursor:pointer;
-  background:transparent;color:var(--muted);border:1px solid var(--border);
-  transition:all var(--transition);
-}
-.filter-pill:hover{border-color:rgba(255,255,255,0.2);color:var(--text)}
-.filter-pill.active{background:var(--primary-dim);color:var(--primary);border-color:var(--primary-border)}
-.lb-table{width:100%;border-collapse:collapse;margin-bottom:12px}
-.lb-table th{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:6px 4px;text-align:left;border-bottom:1px solid var(--border)}
-.lb-table td{font-size:12px;padding:7px 4px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text)}
-.lb-rank{font-weight:700;color:var(--muted)}
-.lb-rank-1{color:#fbbf24}
-.lb-rank-2{color:#94a3b8}
-.lb-rank-3{color:#b45309}
-.lb-grade{font-weight:700}
-.grade-s{color:#a78bfa}.grade-a{color:var(--success)}.grade-b{color:var(--warning)}.grade-c{color:var(--orange)}.grade-d{color:var(--danger)}
-.save-form{padding:12px;border-radius:var(--radius-sm);background:var(--surface);border:1px solid var(--border)}
-.save-form-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
-.save-input{
-  width:100%;padding:8px 10px;border-radius:var(--radius-sm);
-  background:rgba(255,255,255,0.03);border:1px solid var(--border);
-  color:var(--text);font-family:'Inter',sans-serif;font-size:12px;
-  outline:none;transition:border-color var(--transition);margin-bottom:8px;
-}
-.save-input:focus{border-color:var(--primary-border)}
-.save-input::placeholder{color:var(--muted)}
-.btn-save{
-  width:100%;padding:8px;border-radius:var(--radius-sm);
-  background:var(--primary);color:#fff;font-size:12px;font-weight:600;
-  border:none;cursor:pointer;transition:all var(--transition);
-}
-.btn-save:hover:not(:disabled){background:#5558e8}
-.btn-save:disabled{opacity:0.35;cursor:not-allowed}
+  /* ── Loading spinner ── */
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-/* TIMELINE MODAL */
-.modal-overlay{
-  position:fixed;inset:0;z-index:100;
-  background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);
-  display:flex;align-items:center;justify-content:center;padding:20px;
-  animation:fadeIn 0.2s ease;
-}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.modal{
-  background:#16161a;border:1px solid var(--border);border-radius:var(--radius);
-  box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 24px 80px rgba(0,0,0,0.6);
-  width:100%;max-width:860px;max-height:85vh;display:flex;flex-direction:column;
-}
-.modal-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
-}
-.modal-title{font-size:15px;font-weight:600}
-.modal-close{
-  background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;
-  padding:4px;border-radius:4px;transition:all var(--transition);
-}
-.modal-close:hover{color:var(--text);background:var(--surface2)}
-.modal-body{overflow-y:auto;padding:16px 20px}
-.modal-body::-webkit-scrollbar{width:4px}
-.modal-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1)}
-.timeline-table{width:100%;border-collapse:collapse}
-.timeline-table th{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)}
-.timeline-table td{font-size:12px;padding:9px 10px;border-bottom:1px solid rgba(255,255,255,0.04)}
-.tl-correct{background:rgba(34,197,94,0.06)}
-.tl-partial{background:rgba(245,158,11,0.06)}
-.tl-wrong{background:rgba(239,68,68,0.06)}
-.tl-correct td:first-child{border-left:3px solid var(--success)}
-.tl-partial td:first-child{border-left:3px solid var(--warning)}
-.tl-wrong td:first-child{border-left:3px solid var(--danger)}
-
-/* UTILS */
-.hidden{display:none!important}
-.text-success{color:var(--success)}
-.text-warning{color:var(--warning)}
-.text-danger{color:var(--danger)}
-.text-muted{color:var(--muted)}
-.section-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding:0 0 6px;border-bottom:1px solid var(--border)}
+  /* ── Empty state ── */
+  .empty-state { text-align: center; padding: 30px; color: var(--muted); font-size: 0.85rem; }
+  .empty-state .icon { font-size: 2rem; margin-bottom: 8px; display: block; }
 </style>
 </head>
 <body>
-<div id="app">
-  <!-- NAVBAR -->
-  <nav class="navbar">
-    <div class="nav-left">
-      <div class="logo">Incident<span>OS</span></div>
-      <div class="badge-env">OpenEnv</div>
-      <div style="font-size:11px;color:var(--muted);padding-left:8px;border-left:1px solid var(--border)">by <span style="color:var(--primary);font-weight:600">BitShift</span></div>
+
+<!-- Particles -->
+<div class="particles" id="particles"></div>
+
+<div class="app">
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🛡️</div>
+      <div>
+        <h1>Incident Response</h1>
+        <span>OpenEnv · Team BitShift</span>
+      </div>
     </div>
-    <div class="nav-right">
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
-        <div class="live-clock" id="clock-ist" style="font-size:11px;font-weight:600;color:var(--text)">--:--:-- IST</div>
-        <div class="live-clock" id="clock-utc" style="font-size:10px">-- UTC</div>
-      </div>
-      <button onclick="runBenchmark()" style="font-size:11px;font-weight:600;padding:5px 12px;border-radius:8px;background:var(--primary-dim);color:var(--primary);border:1px solid var(--primary-border);cursor:pointer;transition:all 0.2s" onmouseover="this.style.background='rgba(99,102,241,0.25)'" onmouseout="this.style.background='var(--primary-dim)'">⚡ Benchmark</button>
-      <div class="live-indicator"><div class="live-dot"></div>Live</div>
+    <div class="header-stats">
+      <div class="stat-pill"><div class="dot"></div><span id="hdr-status">Ready</span></div>
+      <div class="stat-pill">⏱ <span id="hdr-time">00:00</span></div>
     </div>
-  </nav>
+  </header>
 
-  <!-- MAIN -->
-  <div class="main">
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-title">Missions</div>
-        <div class="count-badge" id="task-count">0</div>
-      </div>
-      <div class="task-list" id="task-list">
-        <div style="padding:20px 8px;text-align:center;color:var(--muted);font-size:12px">Loading missions...</div>
-      </div>
-    </aside>
+  <!-- Task selector -->
+  <div class="task-bar" id="taskBar"></div>
 
-    <!-- CENTER -->
-    <main class="center">
-      <!-- EMPTY STATE -->
-      <div class="empty-state" id="empty-state">
-        <div class="empty-icon">🎯</div>
-        <div class="empty-text">Select a mission to begin</div>
-        <div class="empty-sub">Choose a task from the sidebar to start training</div>
-      </div>
-
-      <!-- TASK VIEW (hidden until task selected) -->
-      <div class="task-view hidden" id="task-view">
-        <!-- TOP BAR -->
-        <div class="task-topbar">
-          <div class="breadcrumb">Missions &rsaquo; <span id="bc-task">—</span></div>
-          <div class="progress-wrap">
-            <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-            <div class="step-counter" id="step-counter">Step 0 of 0</div>
+  <!-- Main grid -->
+  <div class="grid">
+    <!-- Left: Alert + Form -->
+    <div>
+      <!-- Progress -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><span class="icon">📊</span> Episode Progress</div>
+        <div class="progress-wrap">
+          <div class="progress-label">
+            <span id="prog-label">Step 0 / 0</span>
+            <span id="prog-pct">0%</span>
           </div>
-          <div class="streak-badge hidden" id="streak-badge">🔥 0</div>
+          <div class="progress-track"><div class="progress-fill" id="progBar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Alert -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><span class="icon">🚨</span> Current Alert</div>
+        <div id="alertBox" class="alert-box">
+          <div class="empty-state"><span class="icon">🎯</span>Select a task and click Start to begin triaging alerts.</div>
+        </div>
+        <div id="hintBox" class="hint-box">
+          <span class="hint-icon">💡</span>
+          <span id="hintText"></span>
+        </div>
+        <button class="btn-secondary" id="hintBtn" style="font-size:0.78rem;padding:6px 12px;margin-top:8px;display:none;" onclick="loadHint()">💡 Get Hint</button>
+      </div>
+
+      <!-- Triage Form -->
+      <div class="card">
+        <div class="card-title"><span class="icon">⚡</span> Triage Decision</div>
+
+        <!-- Severity -->
+        <label style="display:block;margin-bottom:6px;">Severity</label>
+        <div class="sev-grid" id="sevGrid">
+          <button class="sev-btn" data-sev="P1" onclick="setSev('P1')">P1<br><small style="font-weight:400;font-size:0.65rem">Critical</small></button>
+          <button class="sev-btn" data-sev="P2" onclick="setSev('P2')">P2<br><small style="font-weight:400;font-size:0.65rem">High</small></button>
+          <button class="sev-btn" data-sev="P3" onclick="setSev('P3')">P3<br><small style="font-weight:400;font-size:0.65rem">Medium</small></button>
+          <button class="sev-btn" data-sev="P4" onclick="setSev('P4')">P4<br><small style="font-weight:400;font-size:0.65rem">Low</small></button>
         </div>
 
-        <!-- SCROLLABLE CONTENT -->
-        <div class="center-scroll" id="center-scroll">
-          <!-- HINT CARD (injected here) -->
-          <!-- ALERT CARD -->
-          <div class="card alert-card hidden" id="alert-card">
-            <div class="alert-header">
-              <div class="source-badge" id="alert-source">—</div>
-              <div class="alert-ts" id="alert-ts">—</div>
-              <div class="sev-dot" id="sev-dot"></div>
-              <div class="noise-badge hidden" id="noise-badge">⚡ Signal Degraded</div>
-            </div>
-            <div class="alert-title" id="alert-title">—</div>
-            <div class="alert-body" id="alert-body">—</div>
-            <div class="cascade-banner hidden" id="cascade-banner">
-              <span>⚠️</span><span id="cascade-text"></span>
-            </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Incident Type</label>
+            <select id="incType">
+              <option value="database">Database</option>
+              <option value="network">Network</option>
+              <option value="security">Security</option>
+              <option value="application" selected>Application</option>
+              <option value="infrastructure">Infrastructure</option>
+            </select>
           </div>
-
-          <!-- DEBRIEF CARD (injected after step) -->
-          <div class="card debrief-card hidden" id="debrief-card">
-            <div class="debrief-header">
-              <div class="debrief-title">Step Debrief</div>
-              <div class="reward-big" id="debrief-reward">—</div>
-            </div>
-            <div class="breakdown-row" id="breakdown-row"></div>
-            <div class="explain-lines" id="explain-lines"></div>
-          </div>
-
-          <!-- ACTION PANEL -->
-          <div class="card action-card hidden" id="action-card">
-            <!-- SEVERITY -->
-            <div class="action-section">
-              <div class="action-label">Severity</div>
-              <div class="pill-group" id="sev-pills">
-                <button class="pill-btn pill-p1" data-val="P1" onclick="selectSev(this)">P1 Critical</button>
-                <button class="pill-btn pill-p2" data-val="P2" onclick="selectSev(this)">P2 Major</button>
-                <button class="pill-btn pill-p3" data-val="P3" onclick="selectSev(this)">P3 Minor</button>
-                <button class="pill-btn pill-p4" data-val="P4" onclick="selectSev(this)">P4 Info</button>
-              </div>
-            </div>
-            <!-- INCIDENT TYPE -->
-            <div class="action-section">
-              <div class="action-label">Incident Type</div>
-              <div class="pill-group" id="type-pills">
-                <button class="pill-btn pill-type" data-val="database" onclick="selectType(this)">Database</button>
-                <button class="pill-btn pill-type" data-val="network" onclick="selectType(this)">Network</button>
-                <button class="pill-btn pill-type" data-val="security" onclick="selectType(this)">Security</button>
-                <button class="pill-btn pill-type" data-val="application" onclick="selectType(this)">Application</button>
-                <button class="pill-btn pill-type" data-val="infrastructure" onclick="selectType(this)">Infrastructure</button>
-              </div>
-            </div>
-            <!-- TEAM -->
-            <div class="action-section">
-              <div class="action-label">Route to Team</div>
-              <div class="pill-group" id="team-pills">
-                <button class="pill-btn pill-team" data-val="backend" onclick="selectTeam(this)">Backend</button>
-                <button class="pill-btn pill-team" data-val="infra" onclick="selectTeam(this)">Infra</button>
-                <button class="pill-btn pill-team" data-val="security" onclick="selectTeam(this)">Security</button>
-                <button class="pill-btn pill-team" data-val="database" onclick="selectTeam(this)">Database</button>
-                <button class="pill-btn pill-team" data-val="frontend" onclick="selectTeam(this)">Frontend</button>
-              </div>
-            </div>
-            <!-- STATUS UPDATE (hard/noisy_hard only) -->
-            <div class="action-section hidden" id="status-section">
-              <div class="action-label">Status Update</div>
-              <textarea class="status-textarea" id="status-update" placeholder="Draft a brief status update for the incident channel..."></textarea>
-            </div>
-            <!-- FALSE POSITIVE TOGGLE (adversarial only) -->
-            <div class="action-section hidden" id="fp-section">
-              <div class="fp-row">
-                <div class="fp-label">Mark as False Positive</div>
-                <label class="toggle">
-                  <input type="checkbox" id="fp-toggle">
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-            <!-- SUBMIT -->
-            <div class="action-bottom">
-              <button class="btn-primary" id="submit-btn" onclick="submitTriage()" disabled>Submit Triage</button>
-              <button class="btn-ghost" onclick="getHint()">💡 Get Hint</button>
-            </div>
-          </div>
-
-          <!-- EPISODE COMPLETE CARD -->
-          <div class="card complete-card hidden" id="complete-card">
-            <div class="complete-icon">🏆</div>
-            <div class="complete-title">Mission Complete</div>
-            <div class="complete-sub" id="complete-task-name">—</div>
-            <div class="grade-display" id="final-grade">—</div>
-            <div class="score-display" id="final-score">Score: —</div>
-            <div class="stats-grid">
-              <div class="stat-box"><div class="stat-val" id="stat-steps">—</div><div class="stat-lbl">Steps</div></div>
-              <div class="stat-box"><div class="stat-val" id="stat-mean">—</div><div class="stat-lbl">Mean Reward</div></div>
-              <div class="stat-box"><div class="stat-val" id="stat-streak">—</div><div class="stat-lbl">Best Streak</div></div>
-            </div>
-            <button class="btn-primary" onclick="scrollToSave()">Save Score →</button>
+          <div class="form-group">
+            <label>Route to Team</label>
+            <select id="team">
+              <option value="backend" selected>Backend</option>
+              <option value="infra">Infra</option>
+              <option value="security">Security</option>
+              <option value="database">Database</option>
+              <option value="frontend">Frontend</option>
+            </select>
           </div>
         </div>
-      </div>
-    </main>
 
-    <!-- RIGHT PANEL -->
-    <aside class="right-panel">
-      <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('activity',this)">Activity</button>
-        <button class="tab-btn" onclick="switchTab('analytics',this)">Analytics</button>
-        <button class="tab-btn" onclick="switchTab('leaderboard',this)">Leaderboard</button>
-      </div>
+        <div id="statusRow" class="form-group" style="margin-bottom:12px;display:none;">
+          <label>Status Update</label>
+          <textarea id="statusUpdate" placeholder="Describe what's happening and what actions are being taken..."></textarea>
+        </div>
 
-      <!-- ACTIVITY TAB -->
-      <div class="tab-content" id="tab-activity">
-        <div id="step-log-list">
-          <div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">No steps yet</div>
+        <div id="fpRow" class="fp-row" style="display:none;">
+          <input type="checkbox" id="fpCheck" />
+          <label for="fpCheck" style="text-transform:none;letter-spacing:0;font-size:0.85rem;color:var(--text);cursor:pointer;">Mark as False Positive</label>
         </div>
-        <button class="export-btn" onclick="exportSession()">⬇ Export Session</button>
-      </div>
 
-      <!-- ANALYTICS TAB -->
-      <div class="tab-content hidden" id="tab-analytics">
-        <div class="section-label">Session Stats</div>
-        <div class="stat-row"><span class="stat-row-label">Steps Taken</span><span class="stat-row-val" id="an-steps">0</span></div>
-        <div class="stat-row"><span class="stat-row-label">Mean Reward</span><span class="stat-row-val" id="an-mean">—</span></div>
-        <div class="stat-row"><span class="stat-row-label">Best Streak</span><span class="stat-row-val" id="an-streak">0</span></div>
-        <div class="chart-section">
-          <div class="chart-title">Team Routing Accuracy</div>
-          <div id="team-chart"></div>
-        </div>
-        <div class="chart-section">
-          <div class="chart-title">Severity Accuracy</div>
-          <div id="sev-chart"></div>
-        </div>
-        <button class="btn-timeline" onclick="openTimeline()">📋 View Timeline</button>
-      </div>
+        <button class="btn-submit" id="submitBtn" onclick="submitAction(event)" disabled>
+          Submit Triage
+        </button>
 
-      <!-- LEADERBOARD TAB -->
-      <div class="tab-content hidden" id="tab-leaderboard">
-        <div class="filter-pills" id="lb-filters">
-          <button class="filter-pill active" data-task="" onclick="filterLB(this)">All</button>
-        </div>
-        <table class="lb-table">
-          <thead><tr><th>#</th><th>Name</th><th>Task</th><th>Score</th><th>Grade</th></tr></thead>
-          <tbody id="lb-body"><tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No entries yet</td></tr></tbody>
-        </table>
-        <div class="save-form" id="save-form">
-          <div class="save-form-title">Save Your Score</div>
-          <input class="save-input" id="save-name" type="text" placeholder="Your name or handle" maxlength="32">
-          <button class="btn-save" id="save-btn" onclick="saveScore()" disabled>Save to Board</button>
-        </div>
+        <div id="resultBox" class="result-box"></div>
       </div>
-    </aside>
-  </div>
-</div>
-
-<!-- TIMELINE MODAL -->
-<div class="modal-overlay hidden" id="timeline-modal" onclick="closeTimelineOutside(event)">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Episode Timeline</div>
-      <button class="modal-close" onclick="closeTimeline()">✕</button>
     </div>
-    <div class="modal-body">
-      <table class="timeline-table">
-        <thead><tr><th>#</th><th>Alert</th><th>Severity</th><th>Team</th><th>Type</th><th>Reward</th></tr></thead>
-        <tbody id="timeline-body"></tbody>
-      </table>
+
+    <!-- Right panel -->
+    <div class="right-panel">
+      <!-- Streak -->
+      <div class="streak-card">
+        <div class="card-title" style="justify-content:center;"><span class="icon">🔥</span> Streak</div>
+        <div class="streak-num" id="streakNum">0</div>
+        <div class="streak-label">consecutive correct</div>
+        <div class="streak-best" id="streakBest">Best: 0</div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📋</span> Timeline</div>
+        <div class="timeline" id="timeline">
+          <div class="empty-state"><span class="icon">⏳</span>No actions yet</div>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="card">
+        <div class="card-title"><span class="icon">🏆</span> Leaderboard</div>
+        <div id="leaderboard">
+          <div class="empty-state"><span class="icon">🏅</span>No scores yet</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+<!-- Done overlay -->
+<div class="done-overlay" id="doneOverlay">
+  <div class="done-card">
+    <span class="done-emoji" id="doneEmoji">🎉</span>
+    <div class="done-score" id="doneScore">0.00</div>
+    <div class="done-label" id="doneLabel">Episode Complete</div>
+    <div class="breakdown" id="doneBd" style="justify-content:center;margin-bottom:16px;"></div>
+    <div class="save-form">
+      <input type="text" id="playerName" placeholder="Your name..." maxlength="32" />
+      <button class="btn-save" onclick="saveScore()">Save Score</button>
+    </div>
+    <div class="done-actions" style="margin-top:12px;">
+      <button class="btn-secondary" onclick="closeDone()">Close</button>
+      <button class="btn-submit" style="width:auto;padding:10px 20px;" onclick="restartSame()">Play Again</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
-// ── STATE ──────────────────────────────────────────────────────────────────
-const state = {
-  currentTask: null,
-  currentObs: null,
-  episodeDone: false,
-  stepLog: [],
-  sessionStats: { steps: 0, totalReward: 0, bestStreak: 0 },
-  selectedSeverity: null,
-  selectedType: null,
-  selectedTeam: null,
-  finalScore: null,
-  finalGrade: null,
+// ── State ──────────────────────────────────────────────────────────────────
+let state = {
+  taskId: 'easy',
+  sessionId: null,
+  started: false,
+  step: 0,
+  total: 0,
+  severity: null,
+  rewards: [],
+  timerInterval: null,
+  startTime: null,
+  tasks: [],
 };
 
-// ── TASK CONFIGS (difficulty mapping) ─────────────────────────────────────
-const TASK_DIFFICULTY = {
-  easy: 'easy', medium: 'medium', hard: 'hard',
-  adversarial: 'special', persona_startup: 'medium', persona_enterprise: 'medium',
-  noisy_easy: 'easy', noisy_hard: 'hard',
-};
-const TASK_LABELS = {
-  easy: 'Severity Classification', medium: 'Severity + Team Routing',
-  hard: 'Full Incident Triage', adversarial: 'Adversarial Detection',
-  persona_startup: 'Startup On-Call', persona_enterprise: 'Enterprise SRE',
-  noisy_easy: 'Noisy Easy', noisy_hard: 'Noisy Hard',
-};
+// ── Particles ──────────────────────────────────────────────────────────────
+(function spawnParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 25; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (8 + Math.random() * 12) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    p.style.width = p.style.height = (1 + Math.random() * 3) + 'px';
+    const colors = ['#3b82f6','#06b6d4','#10b981','#8b5cf6'];
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    container.appendChild(p);
+  }
+})();
 
-// ── CLOCK (IST = UTC+5:30) ─────────────────────────────────────────────────
-function updateClock() {
-  const now = new Date();
-  // IST
-  const ist = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-  const pad = n => String(n).padStart(2, '0');
-  const h = ist.getUTCHours(), m = ist.getUTCMinutes(), s = ist.getUTCSeconds();
-  const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 || 12;
-  document.getElementById('clock-ist').textContent = `${pad(h12)}:${pad(m)}:${pad(s)} ${ampm} IST`;
-  // UTC
-  document.getElementById('clock-utc').textContent =
-    `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`;
+// ── Timer ──────────────────────────────────────────────────────────────────
+function startTimer() {
+  state.startTime = Date.now();
+  clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - state.startTime) / 1000);
+    const m = Math.floor(s / 60).toString().padStart(2,'0');
+    const sec = (s % 60).toString().padStart(2,'0');
+    document.getElementById('hdr-time').textContent = m + ':' + sec;
+  }, 1000);
 }
-setInterval(updateClock, 1000);
-updateClock();
 
-// ── LOAD TASKS ─────────────────────────────────────────────────────────────
+// ── Load tasks ─────────────────────────────────────────────────────────────
 async function loadTasks() {
   try {
-    const res = await fetch('/tasks');
-    const data = await res.json();
-    renderTaskList(data.tasks);
-    loadLeaderboardFilters(data.tasks);
-  } catch (e) {
-    document.getElementById('task-list').innerHTML =
-      '<div style="padding:16px;text-align:center;color:var(--danger);font-size:12px">Failed to load tasks</div>';
-  }
-}
-
-function renderTaskList(tasks) {
-  const list = document.getElementById('task-list');
-  document.getElementById('task-count').textContent = tasks.length;
-  list.innerHTML = tasks.map(t => {
-    const diff = TASK_DIFFICULTY[t.id] || 'medium';
-    const label = TASK_LABELS[t.id] || t.id;
-    return `<div class="task-card" id="tc-${t.id}" onclick="selectTask('${t.id}','${label}')">
-      <div class="task-name">${label}</div>
-      <div class="task-desc">${t.description || ''}</div>
-      <div class="task-meta">
-        <span class="diff-pill diff-${diff}">${diff}</span>
-        <span class="alert-count">📋 ${t.alert_count} alerts</span>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function loadLeaderboardFilters(tasks) {
-  const container = document.getElementById('lb-filters');
-  const extra = tasks.map(t =>
-    `<button class="filter-pill" data-task="${t.id}" onclick="filterLB(this)">${TASK_LABELS[t.id] || t.id}</button>`
-  ).join('');
-  container.innerHTML = `<button class="filter-pill active" data-task="" onclick="filterLB(this)">All</button>` + extra;
-}
-
-// ── SELECT TASK ────────────────────────────────────────────────────────────
-async function selectTask(taskId, label) {
-  // Update sidebar active state
-  document.querySelectorAll('.task-card').forEach(c => c.classList.remove('active'));
-  const card = document.getElementById('tc-' + taskId);
-  if (card) card.classList.add('active');
-
-  state.currentTask = taskId;
-  state.episodeDone = false;
-  state.stepLog = [];
-  state.sessionStats = { steps: 0, totalReward: 0, bestStreak: 0 };
-  state.selectedSeverity = null;
-  state.selectedType = null;
-  state.selectedTeam = null;
-  state.finalScore = null;
-  state.finalGrade = null;
-
-  // Show task view
-  document.getElementById('empty-state').classList.add('hidden');
-  document.getElementById('task-view').classList.remove('hidden');
-  document.getElementById('bc-task').textContent = label;
-
-  // Reset UI
-  resetActionPanel();
-  document.getElementById('debrief-card').classList.add('hidden');
-  document.getElementById('complete-card').classList.add('hidden');
-  document.getElementById('alert-card').classList.add('hidden');
-  document.getElementById('action-card').classList.add('hidden');
-  removeHint();
-  document.getElementById('step-log-list').innerHTML =
-    '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">No steps yet</div>';
-  document.getElementById('save-btn').disabled = true;
-
-  // Reset progress
-  setProgress(0, 0, 0);
-
-  try {
-    const res = await fetch('/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ task_id: taskId }),
-    });
-    const obs = await res.json();
-    state.currentObs = obs;
-    renderObservation(obs);
+    const r = await fetch('/tasks');
+    const d = await r.json();
+    state.tasks = d.tasks;
+    renderTaskBar(d.tasks);
     loadLeaderboard();
-  } catch (e) {
-    showError('Failed to start task: ' + e.message);
-  }
+  } catch(e) { showToast('⚠️ Could not connect to server', 'bad'); }
 }
 
-// ── RENDER OBSERVATION ─────────────────────────────────────────────────────
-function renderObservation(obs) {
-  if (!obs || !obs.alert) return;
-  const alert = obs.alert;
-
-  document.getElementById('alert-card').classList.remove('hidden');
-  document.getElementById('action-card').classList.remove('hidden');
-  document.getElementById('complete-card').classList.add('hidden');
-  document.getElementById('debrief-card').classList.add('hidden');
-
-  // Source + timestamp
-  document.getElementById('alert-source').textContent = alert.source || '—';
-  document.getElementById('alert-ts').textContent = formatTs(alert.timestamp);
-
-  // Severity dot color based on title keywords
-  const dot = document.getElementById('sev-dot');
-  const title = (alert.title || '').toUpperCase();
-  if (title.includes('CRITICAL')) dot.style.background = 'var(--danger)';
-  else if (title.includes('ERROR') || title.includes('WARNING')) dot.style.background = 'var(--warning)';
-  else dot.style.background = 'var(--success)';
-
-  // Noise badge
-  const noiseBadge = document.getElementById('noise-badge');
-  const alertCard = document.getElementById('alert-card');
-  if (alert.noise_level > 0.2) {
-    noiseBadge.classList.remove('hidden');
-    alertCard.classList.add('noisy');
-  } else {
-    noiseBadge.classList.add('hidden');
-    alertCard.classList.remove('noisy');
-  }
-
-  document.getElementById('alert-title').textContent = alert.title || '—';
-  document.getElementById('alert-body').textContent = alert.body || '—';
-
-  // Cascading context
-  const cascade = document.getElementById('cascade-banner');
-  if (obs.cascading_context) {
-    document.getElementById('cascade-text').textContent = obs.cascading_context;
-    cascade.classList.remove('hidden');
-  } else {
-    cascade.classList.add('hidden');
-  }
-
-  // Progress
-  setProgress(obs.step, obs.total_steps, obs.step);
-
-  // Show/hide status update and FP toggle
-  const needsStatus = ['hard', 'noisy_hard'].includes(state.currentTask);
-  const needsFP = state.currentTask === 'adversarial';
-  document.getElementById('status-section').classList.toggle('hidden', !needsStatus);
-  document.getElementById('fp-section').classList.toggle('hidden', !needsFP);
-
-  // Reset selections
-  resetActionPanel();
-  checkSubmitReady();
-
-  // Scroll to top
-  document.getElementById('center-scroll').scrollTop = 0;
+function renderTaskBar(tasks) {
+  const bar = document.getElementById('taskBar');
+  bar.innerHTML = '';
+  tasks.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'task-btn' + (t.id === state.taskId ? ' active' : '');
+    btn.textContent = t.id.replace('_',' ') + ' (' + t.alert_count + ')';
+    btn.onclick = () => selectTask(t.id);
+    bar.appendChild(btn);
+  });
+  // Start button
+  const startBtn = document.createElement('button');
+  startBtn.id = 'startBtn';
+  startBtn.className = 'task-btn';
+  startBtn.style.cssText = 'background:linear-gradient(135deg,rgba(59,130,246,0.2),rgba(6,182,212,0.2));border-color:var(--accent);color:var(--text);margin-left:auto;';
+  startBtn.textContent = '▶ Start';
+  startBtn.onclick = startEpisode;
+  bar.appendChild(startBtn);
 }
 
-function formatTs(ts) {
-  if (!ts) return '—';
+function selectTask(id) {
+  state.taskId = id;
+  document.querySelectorAll('.task-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.startsWith(id.replace('_',' ')));
+  });
+}
+
+// ── Start episode ──────────────────────────────────────────────────────────
+async function startEpisode() {
+  state.sessionId = 'sess_' + Date.now();
+  state.rewards = [];
+  state.step = 0;
+  document.getElementById('timeline').innerHTML = '<div class="empty-state"><span class="icon">⏳</span>No actions yet</div>';
+  document.getElementById('resultBox').className = 'result-box';
+  document.getElementById('hintBox').className = 'hint-box';
+  document.getElementById('hdr-status').textContent = 'Running';
+
   try {
-    return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
-  } catch { return ts; }
+    const r = await fetch('/reset', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ task_id: state.taskId, session_id: state.sessionId })
+    });
+    const obs = await r.json();
+    state.total = obs.total_steps;
+    state.step = obs.step;
+    state.started = true;
+    renderAlert(obs);
+    updateProgress(obs.step, obs.total_steps);
+    enableForm(true);
+    startTimer();
+    showToast('🚀 Episode started — ' + state.taskId, 'ok');
+    loadLeaderboard();
+  } catch(e) { showToast('❌ Failed to start: ' + e.message, 'bad'); }
 }
 
-function setProgress(step, total, current) {
-  const pct = total > 0 ? Math.round((current / total) * 100) : 0;
-  document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('step-counter').textContent = `Step ${step} of ${total}`;
+// ── Render alert ───────────────────────────────────────────────────────────
+function renderAlert(obs) {
+  const box = document.getElementById('alertBox');
+  if (!obs || !obs.alert) {
+    box.innerHTML = '<div class="empty-state"><span class="icon">✅</span>Episode complete!</div>';
+    return;
+  }
+  const a = obs.alert;
+  const ts = a.timestamp ? new Date(a.timestamp).toLocaleString() : '';
+  box.innerHTML = `
+    <div class="alert-source">${a.source || 'System'} · ${ts}</div>
+    <div class="alert-title">${a.title || 'Alert'}</div>
+    <div class="alert-body">${(a.body || '').replace(/\n/g,'<br>')}</div>
+    <div class="alert-meta">
+      <span class="badge badge-step">Step ${obs.step + 1} / ${obs.total_steps}</span>
+      <span class="badge badge-task">${obs.task_id}</span>
+      ${obs.persona ? `<span class="badge" style="background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);">${obs.persona}</span>` : ''}
+    </div>
+    ${obs.cascading_context ? `<div style="margin-top:10px;padding:8px 10px;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);border-radius:8px;font-size:0.78rem;color:#67e8f9;">🔗 ${obs.cascading_context}</div>` : ''}
+  `;
+  box.classList.remove('new-alert');
+  void box.offsetWidth;
+  box.classList.add('new-alert');
+
+  // Show/hide form fields based on task
+  const task = state.tasks.find(t => t.id === state.taskId);
+  const fields = task ? task.grade_fields : [];
+  document.getElementById('statusRow').style.display = fields.includes('status_update') ? 'flex' : 'none';
+  document.getElementById('fpRow').style.display = fields.includes('false_positive') ? 'flex' : 'none';
+  document.getElementById('hintBtn').style.display = 'inline-block';
+  document.getElementById('hintBox').className = 'hint-box';
 }
 
-// ── PILL SELECTION ─────────────────────────────────────────────────────────
-function selectSev(btn) {
-  document.querySelectorAll('#sev-pills .pill-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  state.selectedSeverity = btn.dataset.val;
-  checkSubmitReady();
-}
-function selectType(btn) {
-  document.querySelectorAll('#type-pills .pill-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  state.selectedType = btn.dataset.val;
-  checkSubmitReady();
-}
-function selectTeam(btn) {
-  document.querySelectorAll('#team-pills .pill-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  state.selectedTeam = btn.dataset.val;
-  checkSubmitReady();
+// ── Progress ───────────────────────────────────────────────────────────────
+function updateProgress(step, total) {
+  const pct = total > 0 ? Math.round((step / total) * 100) : 0;
+  document.getElementById('progBar').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = 'Step ' + step + ' / ' + total;
+  document.getElementById('prog-pct').textContent = pct + '%';
 }
 
-function checkSubmitReady() {
-  const ready = state.selectedSeverity && state.selectedType && state.selectedTeam;
-  document.getElementById('submit-btn').disabled = !ready;
+// ── Severity selector ──────────────────────────────────────────────────────
+function setSev(sev) {
+  state.severity = sev;
+  document.querySelectorAll('.sev-btn').forEach(b => {
+    b.className = 'sev-btn' + (b.dataset.sev === sev ? ' active-' + sev : '');
+  });
 }
 
-function resetActionPanel() {
-  document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('selected'));
-  state.selectedSeverity = null;
-  state.selectedType = null;
-  state.selectedTeam = null;
-  const su = document.getElementById('status-update');
-  if (su) su.value = '';
-  const fp = document.getElementById('fp-toggle');
-  if (fp) fp.checked = false;
-  document.getElementById('submit-btn').disabled = true;
-}
+// ── Submit ─────────────────────────────────────────────────────────────────
+async function submitAction(e) {
+  if (!state.started || !state.severity) {
+    showToast('⚠️ Select a severity first', 'partial');
+    return;
+  }
+  // Ripple
+  const btn = document.getElementById('submitBtn');
+  const rect = btn.getBoundingClientRect();
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  ripple.style.cssText = `width:${rect.width*2}px;height:${rect.width*2}px;left:${e.clientX-rect.left-rect.width}px;top:${e.clientY-rect.top-rect.width}px;`;
+  btn.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 700);
 
-// ── SUBMIT TRIAGE ──────────────────────────────────────────────────────────
-async function submitTriage() {
-  if (!state.selectedSeverity || !state.selectedType || !state.selectedTeam) return;
-
-  const btn = document.getElementById('submit-btn');
   btn.disabled = true;
-  btn.textContent = 'Submitting...';
+  btn.innerHTML = '<span class="spinner"></span>';
 
   const payload = {
-    severity: state.selectedSeverity,
-    incident_type: state.selectedType,
-    team: state.selectedTeam,
-    status_update: document.getElementById('status-update')?.value || null,
-    is_false_positive: document.getElementById('fp-toggle')?.checked || null,
+    severity: state.severity,
+    incident_type: document.getElementById('incType').value,
+    team: document.getElementById('team').value,
+    session_id: state.sessionId,
   };
+  const su = document.getElementById('statusUpdate').value.trim();
+  if (su) payload.status_update = su;
+  const fp = document.getElementById('fpCheck');
+  if (fp.offsetParent) payload.is_false_positive = fp.checked;
 
   try {
-    const res = await fetch('/step', {
+    const r = await fetch('/step', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
     });
-    const data = await res.json();
+    const d = await r.json();
+    state.rewards.push(d.reward.value);
+    state.step++;
 
-    // Update streak
-    const streak = data.streak || 0;
-    state.sessionStats.bestStreak = Math.max(state.sessionStats.bestStreak, streak);
-    const sb = document.getElementById('streak-badge');
-    if (streak > 0) {
-      sb.classList.remove('hidden');
-      sb.textContent = '🔥 ' + streak;
-    } else {
-      sb.classList.add('hidden');
+    renderResult(d);
+    updateStreak(d.streak);
+    addTimelineEntry(d);
+    updateProgress(state.step, state.total);
+
+    if (d.done) {
+      clearInterval(state.timerInterval);
+      state.started = false;
+      enableForm(false);
+      document.getElementById('hdr-status').textContent = 'Done';
+      setTimeout(() => showDone(d), 600);
+    } else if (d.observation) {
+      renderAlert(d.observation);
+      document.getElementById('statusUpdate').value = '';
+      document.getElementById('fpCheck').checked = false;
+      document.getElementById('hintBox').className = 'hint-box';
     }
-
-    // Update session stats
-    state.sessionStats.steps++;
-    state.sessionStats.totalReward += data.reward?.value || 0;
-
-    // Log step
-    const logEntry = {
-      step: state.sessionStats.steps,
-      severity: state.selectedSeverity,
-      team: state.selectedTeam,
-      type: state.selectedType,
-      reward: data.reward?.value || 0,
-      breakdown: data.reward?.breakdown || {},
-    };
-    state.stepLog.unshift(logEntry);
-    renderStepLog();
-    updateAnalytics();
-
-    // Fetch explain
-    const expRes = await fetch('/explain');
-    const expData = await expRes.json();
-    renderDebrief(data.reward, expData);
-
-    // Done?
-    if (data.done) {
-      state.episodeDone = true;
-      state.currentObs = null;
-      showEpisodeComplete(data.reward);
-      document.getElementById('action-card').classList.add('hidden');
-      document.getElementById('save-btn').disabled = false;
-    } else if (data.observation) {
-      state.currentObs = data.observation;
-      setTimeout(() => renderObservation(data.observation), 600);
-    }
-
-    btn.textContent = 'Submit Triage';
-  } catch (e) {
+  } catch(err) {
+    showToast('❌ Error: ' + err.message, 'bad');
+  } finally {
     btn.disabled = false;
     btn.textContent = 'Submit Triage';
-    showError('Step failed: ' + e.message);
   }
 }
 
-// ── DEBRIEF ────────────────────────────────────────────────────────────────
-function renderDebrief(reward, explain) {
-  const card = document.getElementById('debrief-card');
-  card.classList.remove('hidden');
+// ── Result ─────────────────────────────────────────────────────────────────
+function renderResult(d) {
+  const box = document.getElementById('resultBox');
+  const rv = d.reward.value;
+  const cls = rv >= 0.99 ? 'good' : rv >= 0.5 ? 'partial' : 'bad';
+  const emoji = rv >= 0.99 ? '✅' : rv >= 0.5 ? '⚠️' : '❌';
+  const bd = d.reward.breakdown || {};
 
-  const val = reward?.value ?? 0;
-  const rewardEl = document.getElementById('debrief-reward');
-  rewardEl.textContent = (val * 100).toFixed(0) + '%';
-  rewardEl.className = 'reward-big ' + (val >= 0.99 ? 'reward-perfect' : val >= 0.5 ? 'reward-good' : 'reward-bad');
-
-  // Breakdown chips
-  const bd = reward?.breakdown || {};
-  const row = document.getElementById('breakdown-row');
-  row.innerHTML = Object.entries(bd).map(([k, v]) => {
-    const cls = v >= 0.99 ? 'chip-perfect' : v >= 0.4 ? 'chip-partial' : 'chip-wrong';
-    const icon = v >= 0.99 ? '✓' : v >= 0.4 ? '~' : '✗';
-    return `<span class="breakdown-chip ${cls}">${icon} ${k}: ${(v*100).toFixed(0)}%</span>`;
+  const chips = Object.entries(bd).map(([k, v]) => {
+    const c = v >= 0.99 ? 'ok' : v > 0 ? 'partial' : 'fail';
+    const icon = v >= 0.99 ? '✓' : v > 0 ? '~' : '✗';
+    return `<span class="bd-chip ${c}">${icon} ${k}</span>`;
   }).join('');
 
-  // Explanation lines
-  const lines = explain?.explanation || [];
-  document.getElementById('explain-lines').innerHTML = lines.map(l =>
-    `<div class="explain-line">${l}</div>`
-  ).join('');
+  box.innerHTML = `
+    <div class="result-score">${emoji} ${rv.toFixed(2)}</div>
+    <div class="result-label">Reward score</div>
+    <div class="breakdown">${chips}</div>
+  `;
+  box.className = 'result-box show ' + cls;
 }
 
-// ── EPISODE COMPLETE ───────────────────────────────────────────────────────
-function showEpisodeComplete(lastReward) {
-  const steps = state.sessionStats.steps;
-  const mean = steps > 0 ? state.sessionStats.totalReward / steps : 0;
-  const grade = calcGrade(mean);
-  state.finalScore = mean;
-  state.finalGrade = grade;
-
-  document.getElementById('complete-card').classList.remove('hidden');
-  document.getElementById('complete-task-name').textContent = TASK_LABELS[state.currentTask] || state.currentTask;
-  document.getElementById('final-grade').textContent = grade;
-  document.getElementById('final-score').textContent = 'Score: ' + (mean * 100).toFixed(1) + '%';
-  document.getElementById('stat-steps').textContent = steps;
-  document.getElementById('stat-mean').textContent = (mean * 100).toFixed(1) + '%';
-  document.getElementById('stat-streak').textContent = state.sessionStats.bestStreak;
-
-  // Scroll to complete card
-  setTimeout(() => {
-    document.getElementById('complete-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 300);
+// ── Streak ─────────────────────────────────────────────────────────────────
+function updateStreak(s) {
+  const el = document.getElementById('streakNum');
+  el.textContent = s;
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+  // Update best
+  const cur = parseInt(document.getElementById('streakBest').textContent.replace('Best: ',''));
+  if (s > cur) document.getElementById('streakBest').textContent = 'Best: ' + s;
 }
 
-function calcGrade(mean) {
-  if (mean >= 0.95) return 'S';
-  if (mean >= 0.85) return 'A';
-  if (mean >= 0.70) return 'B';
-  if (mean >= 0.55) return 'C';
-  return 'D';
+// ── Timeline ───────────────────────────────────────────────────────────────
+function addTimelineEntry(d) {
+  const tl = document.getElementById('timeline');
+  if (tl.querySelector('.empty-state')) tl.innerHTML = '';
+  const rv = d.reward.value;
+  const cls = rv >= 0.99 ? 'ok' : rv >= 0.5 ? 'partial' : 'fail';
+  const item = document.createElement('div');
+  item.className = 'tl-item';
+  const alertTitle = d.observation?.alert?.title || ('Step ' + state.step);
+  item.innerHTML = `
+    <div class="tl-dot ${cls}"></div>
+    <div class="tl-title">${alertTitle}</div>
+    <div class="tl-score">${rv.toFixed(2)}</div>
+  `;
+  tl.insertBefore(item, tl.firstChild);
 }
 
-function scrollToSave() {
-  switchTab('leaderboard', document.querySelectorAll('.tab-btn')[2]);
-  setTimeout(() => document.getElementById('save-form').scrollIntoView({ behavior: 'smooth' }), 100);
-}
-
-// ── HINT ───────────────────────────────────────────────────────────────────
-async function getHint() {
-  removeHint();
+// ── Hint ───────────────────────────────────────────────────────────────────
+async function loadHint() {
   try {
-    const res = await fetch('/hint');
-    const data = await res.json();
-    showHint(data.hint);
-  } catch (e) {
-    showHint('No hint available right now.');
-  }
+    const r = await fetch('/hint');
+    const d = await r.json();
+    document.getElementById('hintText').textContent = d.hint;
+    document.getElementById('hintBox').className = 'hint-box show';
+  } catch(e) {}
 }
 
-function showHint(text) {
-  removeHint();
-  const hint = document.createElement('div');
-  hint.className = 'hint-card';
-  hint.id = 'hint-card';
-  hint.innerHTML = `<span class="hint-icon">💡</span><span class="hint-text">${text}</span><button class="hint-close" onclick="removeHint()">✕</button>`;
-  const scroll = document.getElementById('center-scroll');
-  scroll.insertBefore(hint, scroll.firstChild);
-}
-
-function removeHint() {
-  const h = document.getElementById('hint-card');
-  if (h) h.remove();
-}
-
-// ── STEP LOG ───────────────────────────────────────────────────────────────
-function renderStepLog() {
-  const list = document.getElementById('step-log-list');
-  if (state.stepLog.length === 0) {
-    list.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">No steps yet</div>';
-    return;
-  }
-  list.innerHTML = state.stepLog.map(s => {
-    const r = s.reward;
-    const rCls = r >= 0.99 ? 'text-success' : r >= 0.5 ? 'text-warning' : 'text-danger';
-    const chips = [
-      `<span class="step-chip">${s.severity}</span>`,
-      `<span class="step-chip">${s.team}</span>`,
-      `<span class="step-chip">${s.type}</span>`,
-    ].join('');
-    return `<div class="step-log-card">
-      <div class="step-log-header">
-        <span class="step-num">Step ${s.step}</span>
-        <span class="step-reward ${rCls}">${(r*100).toFixed(0)}%</span>
-      </div>
-      <div class="step-chips">${chips}</div>
-    </div>`;
-  }).join('');
-}
-
-// ── ANALYTICS ─────────────────────────────────────────────────────────────
-async function updateAnalytics() {
-  const steps = state.sessionStats.steps;
-  const mean = steps > 0 ? state.sessionStats.totalReward / steps : 0;
-  document.getElementById('an-steps').textContent = steps;
-  document.getElementById('an-mean').textContent = steps > 0 ? (mean * 100).toFixed(1) + '%' : '—';
-  document.getElementById('an-streak').textContent = state.sessionStats.bestStreak;
-
-  try {
-    const res = await fetch('/analytics');
-    const data = await res.json();
-    renderBarChart('team-chart', data.teams);
-    renderBarChart('sev-chart', data.severities);
-  } catch (e) {}
-}
-
-function renderBarChart(containerId, data) {
-  const container = document.getElementById(containerId);
-  if (!data || Object.keys(data).length === 0) {
-    container.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">No data yet</div>';
-    return;
-  }
-  container.innerHTML = Object.entries(data).map(([label, v]) => {
-    const pct = v.accuracy != null ? Math.round(v.accuracy * 100) : 0;
-    const color = pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
-    return `<div class="bar-row">
-      <span class="bar-label">${label}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
-      <span class="bar-pct">${v.total > 0 ? pct + '%' : '—'}</span>
-    </div>`;
-  }).join('');
-}
-
-// ── EXPORT ─────────────────────────────────────────────────────────────────
-async function exportSession() {
-  try {
-    const res = await fetch('/session/export');
-    const data = await res.json();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `incident-session-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    showError('Export failed: ' + e.message);
-  }
-}
-
-// ── TIMELINE MODAL ─────────────────────────────────────────────────────────
-async function openTimeline() {
-  try {
-    const res = await fetch('/timeline');
-    const data = await res.json();
-    renderTimeline(data.steps);
-    document.getElementById('timeline-modal').classList.remove('hidden');
-  } catch (e) {
-    showError('Failed to load timeline');
-  }
-}
-
-function renderTimeline(steps) {
-  const tbody = document.getElementById('timeline-body');
-  if (!steps || steps.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">No steps recorded</td></tr>';
-    return;
-  }
-  tbody.innerHTML = steps.map(s => {
-    const r = s.reward;
-    const rowCls = r >= 0.99 ? 'tl-correct' : r >= 0.5 ? 'tl-partial' : 'tl-wrong';
-    const rCls = r >= 0.99 ? 'text-success' : r >= 0.5 ? 'text-warning' : 'text-danger';
-    const exp = s.expected || {};
-    const act = s.action || {};
-    const sevMatch = act.severity === exp.severity;
-    const teamMatch = act.team === exp.team;
-    const typeMatch = act.incident_type === exp.incident_type;
-    return `<tr class="${rowCls}">
-      <td style="color:var(--muted)">${s.step}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.alert_title || '—'}</td>
-      <td><span style="color:${sevMatch?'var(--success)':'var(--danger)'}">${act.severity||'—'}</span>${!sevMatch?` <span style="color:var(--muted);font-size:10px">→${exp.severity}</span>`:''}</td>
-      <td><span style="color:${teamMatch?'var(--success)':'var(--danger)'}">${act.team||'—'}</span>${!teamMatch?` <span style="color:var(--muted);font-size:10px">→${exp.team}</span>`:''}</td>
-      <td><span style="color:${typeMatch?'var(--success)':'var(--danger)'}">${act.incident_type||'—'}</span>${!typeMatch?` <span style="color:var(--muted);font-size:10px">→${exp.incident_type}</span>`:''}</td>
-      <td class="${rCls}" style="font-weight:600">${(r*100).toFixed(0)}%</td>
-    </tr>`;
-  }).join('');
-}
-
-function closeTimeline() {
-  document.getElementById('timeline-modal').classList.add('hidden');
-}
-function closeTimelineOutside(e) {
-  if (e.target === document.getElementById('timeline-modal')) closeTimeline();
-}
-
-// ── LEADERBOARD ────────────────────────────────────────────────────────────
-let lbFilter = '';
-async function loadLeaderboard() {
-  try {
-    const url = lbFilter ? `/leaderboard?task_id=${lbFilter}` : '/leaderboard';
-    const res = await fetch(url);
-    const data = await res.json();
-    renderLeaderboard(data.entries);
-  } catch (e) {}
-}
-
-function renderLeaderboard(entries) {
-  const tbody = document.getElementById('lb-body');
-  if (!entries || entries.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">No entries yet</td></tr>';
-    return;
-  }
-  tbody.innerHTML = entries.map((e, i) => {
-    const rank = i + 1;
-    const rankCls = rank === 1 ? 'lb-rank-1' : rank === 2 ? 'lb-rank-2' : rank === 3 ? 'lb-rank-3' : 'lb-rank';
-    const gradeCls = 'grade-' + (e.grade || 'D').toLowerCase();
-    return `<tr>
-      <td class="${rankCls}">${rank}</td>
-      <td>${e.name || '—'}</td>
-      <td style="color:var(--muted);font-size:11px">${TASK_LABELS[e.task_id] || e.task_id}</td>
-      <td style="font-weight:600">${(e.score * 100).toFixed(1)}%</td>
-      <td class="lb-grade ${gradeCls}">${e.grade}</td>
-    </tr>`;
-  }).join('');
-}
-
-function filterLB(btn) {
-  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  lbFilter = btn.dataset.task || '';
+// ── Done overlay ───────────────────────────────────────────────────────────
+function showDone(lastStep) {
+  const mean = state.rewards.length ? state.rewards.reduce((a,b)=>a+b,0)/state.rewards.length : 0;
+  const emoji = mean >= 0.85 ? '🏆' : mean >= 0.6 ? '🎯' : '📈';
+  document.getElementById('doneEmoji').textContent = emoji;
+  document.getElementById('doneScore').textContent = mean.toFixed(3);
+  document.getElementById('doneLabel').textContent = `Mean reward over ${state.rewards.length} alerts`;
+  document.getElementById('doneOverlay').className = 'done-overlay show';
   loadLeaderboard();
 }
 
+function closeDone() {
+  document.getElementById('doneOverlay').className = 'done-overlay';
+}
+
+function restartSame() {
+  closeDone();
+  startEpisode();
+}
+
+// ── Save score ─────────────────────────────────────────────────────────────
 async function saveScore() {
-  if (!state.episodeDone || state.finalScore === null) return;
-  const name = document.getElementById('save-name').value.trim();
-  if (!name) { document.getElementById('save-name').focus(); return; }
-
-  const btn = document.getElementById('save-btn');
-  btn.disabled = true;
-  btn.textContent = 'Saving...';
-
+  const name = document.getElementById('playerName').value.trim();
+  if (!name) { showToast('Enter your name first', 'partial'); return; }
+  const mean = state.rewards.reduce((a,b)=>a+b,0)/state.rewards.length;
+  const grade = mean >= 0.9 ? 'S' : mean >= 0.75 ? 'A' : mean >= 0.6 ? 'B' : mean >= 0.4 ? 'C' : 'D';
   try {
     await fetch('/leaderboard', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        task_id: state.currentTask,
-        score: state.finalScore,
-        grade: state.finalGrade,
-        steps: state.sessionStats.steps,
-      }),
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, task_id: state.taskId, score: mean, grade, steps: state.rewards.length })
     });
-    btn.textContent = '✓ Saved!';
+    showToast('🏆 Score saved!', 'ok');
     loadLeaderboard();
-    setTimeout(() => { btn.textContent = 'Save to Board'; btn.disabled = false; }, 2000);
-  } catch (e) {
-    btn.textContent = 'Save to Board';
-    btn.disabled = false;
-  }
+    closeDone();
+  } catch(e) { showToast('Failed to save', 'bad'); }
 }
 
-// ── TABS ───────────────────────────────────────────────────────────────────
-function switchTab(name, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('tab-activity').classList.toggle('hidden', name !== 'activity');
-  document.getElementById('tab-analytics').classList.toggle('hidden', name !== 'analytics');
-  document.getElementById('tab-leaderboard').classList.toggle('hidden', name !== 'leaderboard');
-  if (name === 'analytics') updateAnalytics();
-  if (name === 'leaderboard') loadLeaderboard();
-}
-
-// ── ERROR ──────────────────────────────────────────────────────────────────
-function showError(msg) {
-  console.error(msg);
-}
-
-// ── BENCHMARK ──────────────────────────────────────────────────────────────
-async function runBenchmark() {
-  const btn = event.target;
-  btn.textContent = '⏳ Running...';
-  btn.disabled = true;
+// ── Leaderboard ────────────────────────────────────────────────────────────
+async function loadLeaderboard() {
   try {
-    const res = await fetch('/benchmark', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-    const data = await res.json();
-    showBenchmarkModal(data);
-  } catch (e) {
-    showError('Benchmark failed: ' + e.message);
-  } finally {
-    btn.textContent = '⚡ Benchmark';
-    btn.disabled = false;
-  }
+    const r = await fetch('/leaderboard?limit=5');
+    const d = await r.json();
+    const el = document.getElementById('leaderboard');
+    if (!d.entries.length) {
+      el.innerHTML = '<div class="empty-state"><span class="icon">🏅</span>No scores yet</div>';
+      return;
+    }
+    el.innerHTML = d.entries.map((e, i) => {
+      const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1);
+      return `<div class="lb-row">
+        <div class="lb-rank ${rankClass}">${medal}</div>
+        <div class="lb-name">${e.name}</div>
+        <span class="lb-grade">${e.grade}</span>
+        <div class="lb-score">${e.score.toFixed(3)}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
 }
 
-function showBenchmarkModal(data) {
-  // Remove existing
-  const existing = document.getElementById('bench-modal');
-  if (existing) existing.remove();
-
-  const tasks = data.tasks || {};
-  const rows = Object.entries(tasks).map(([tid, t]) => {
-    const pct = (t.mean_reward * 100).toFixed(1);
-    const color = t.mean_reward >= 0.8 ? 'var(--success)' : t.mean_reward >= 0.5 ? 'var(--warning)' : 'var(--danger)';
-    return `<tr>
-      <td style="padding:8px 10px;font-weight:600;text-transform:capitalize">${tid}</td>
-      <td style="padding:8px 10px;color:var(--muted)">${t.steps}</td>
-      <td style="padding:8px 10px;font-weight:700;color:${color}">${pct}%</td>
-    </tr>`;
-  }).join('');
-
-  const composite = ((data.composite_score || 0) * 100).toFixed(1);
-  const modal = document.createElement('div');
-  modal.id = 'bench-modal';
-  modal.className = 'modal-overlay';
-  modal.onclick = e => { if (e.target === modal) modal.remove(); };
-  modal.innerHTML = `<div class="modal" style="max-width:480px">
-    <div class="modal-header">
-      <div class="modal-title">⚡ Benchmark Results</div>
-      <button class="modal-close" onclick="document.getElementById('bench-modal').remove()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div style="text-align:center;margin-bottom:20px">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Composite Score</div>
-        <div style="font-size:48px;font-weight:800;background:linear-gradient(135deg,var(--primary),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${composite}%</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:4px">${data.benchmark_at_ist || ''}</div>
-        <div style="font-size:10px;color:var(--muted);margin-top:2px">by BitShift</div>
-      </div>
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr style="border-bottom:1px solid var(--border)">
-          <th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Task</th>
-          <th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Steps</th>
-          <th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Score</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div style="margin-top:14px;padding:10px 12px;border-radius:8px;background:rgba(99,102,241,0.08);border:1px solid var(--primary-border);font-size:11px;color:var(--muted)">
-        ${data.note || ''}
-      </div>
-    </div>
-  </div>`;
-  document.body.appendChild(modal);
+// ── Enable/disable form ────────────────────────────────────────────────────
+function enableForm(on) {
+  document.getElementById('submitBtn').disabled = !on;
+  document.querySelectorAll('.sev-btn, #incType, #team, #statusUpdate, #fpCheck').forEach(el => {
+    el.disabled = !on;
+  });
 }
 
-// ── INIT ───────────────────────────────────────────────────────────────────
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = type === 'ok' ? 'var(--green)' : type === 'bad' ? 'var(--red)' : 'var(--yellow)';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
 loadTasks();
-loadLeaderboard();
 </script>
 </body>
 </html>
