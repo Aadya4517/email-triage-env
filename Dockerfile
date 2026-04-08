@@ -7,6 +7,8 @@ COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir -e .
 
+ENV PYTHONPATH=/app
+
 # Expose port for HF Space HTTP server
 EXPOSE 7860
 
