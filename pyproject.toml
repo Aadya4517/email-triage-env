@@ -11,10 +11,12 @@ dependencies = [
     "openai>=1.0",
     "fastapi>=0.110",
     "uvicorn>=0.29",
+    "openenv-core>=0.2.0",
 ]
 
 [project.scripts]
 openenv = "openenv_cli:cli"
+server = "server:app"
 
 [tool.setuptools]
 py-modules = ["openenv_cli", "inference", "server", "validate_openenv"]

@@ -2,3 +2,4 @@ pydantic>=2.0
 openai>=1.0
 fastapi>=0.110
 uvicorn>=0.29
+openenv-core>=0.2.0
