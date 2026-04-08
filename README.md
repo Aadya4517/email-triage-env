@@ -1,3 +1,17 @@
+---
+title: Incident Response OpenEnv
+emoji: 🛡️
+colorFrom: blue
+colorTo: cyan
+sdk: docker
+app_port: 7860
+tags:
+  - openenv
+  - reinforcement-learning
+  - sre
+short_description: AI agent incident triage environment by Team BitShift
+---
+
 # Incident Response OpenEnv
 
 A real-world OpenEnv environment where an AI agent acts as an on-call SRE, triaging system alerts by classifying severity, routing to the correct team, and drafting status updates.
