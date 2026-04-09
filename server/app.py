@@ -789,6 +789,9 @@ async def alert_feed(task_id: str = "medium"):
 
 
 def main():
+    """Entry point for multi-mode deployment."""
+    import uvicorn, os
+    uvicorn.run("server.app:app", host="0.0.0.0", port=int(os.getenv("PORT", "7860")))
 
 if __name__ == "__main__":
     main()
