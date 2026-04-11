@@ -3,1024 +3,1169 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Incident Response — BitShift</title>
+<title>⚡ BitShift IR — Incident Response Triage Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
 :root{
-  --bg:#03050d;--s1:#080d1a;--s2:#0c1220;--border:#162035;
-  --accent:#00e5ff;--a2:#7c3aed;--a3:#ff0080;
-  --green:#00ff9d;--yellow:#ffe600;--red:#ff2d55;--orange:#ff6b00;
-  --text:#e8edf5;--muted:#3d5068;
-  --p1:#ff2d55;--p2:#ff6b00;--p3:#ffe600;--p4:#00ff9d;
-  --font:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+  --bg:#fafafa;--white:#ffffff;--purple:#6d28d9;--purple-light:#ede9fe;
+  --purple-mid:#8b5cf6;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;
+  --orange:#f97316;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
+  --card-shadow:0 1px 3px rgba(0,0,0,.1),0 4px 16px rgba(0,0,0,.06);
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-html{scroll-behavior:smooth;}
-body{background:var(--bg);color:var(--text);font-family:var(--font);overflow-x:hidden;min-height:100vh;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+a{text-decoration:none;color:inherit}
 
-/* ── CANVAS BG ── */
-#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+/* NAVBAR */
+.navbar{position:sticky;top:0;z-index:100;background:var(--white);border-bottom:1px solid var(--border);
+  box-shadow:0 1px 8px rgba(0,0,0,.06);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-size:1.2rem;font-weight:800;color:var(--purple);letter-spacing:-.5px}
+.nav-links{display:flex;gap:1.5rem;align-items:center}
+.nav-links a{font-size:.9rem;font-weight:500;color:var(--muted);transition:color .2s}
+.nav-links a:hover{color:var(--purple)}
+.nav-cta{background:var(--purple);color:#fff!important;padding:.4rem 1rem;border-radius:8px;font-weight:600!important}
+.nav-cta:hover{background:var(--purple-mid)!important;color:#fff!important}
 
-/* ── NOISE OVERLAY ── */
-body::before{
-  content:'';position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.025;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-}
+/* HERO */
+.hero{background:linear-gradient(135deg,#f5f3ff 0%,#ede9fe 60%,#ddd6fe 100%);
+  padding:5rem 2rem 4rem;display:flex;align-items:center;justify-content:center;gap:4rem;min-height:520px;position:relative;overflow:hidden}
+.hero-left{max-width:520px;z-index:2}
+.hero-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(109,40,217,.12);
+  color:var(--purple);font-size:.78rem;font-weight:600;padding:.3rem .8rem;border-radius:20px;margin-bottom:1.2rem;letter-spacing:.5px}
+.hero h1{font-size:3.2rem;font-weight:900;line-height:1.1;letter-spacing:-1.5px;color:var(--text);margin-bottom:1rem}
+.hero h1 span{color:var(--purple)}
+.hero-sub{font-size:1.1rem;color:var(--muted);line-height:1.7;margin-bottom:2rem;max-width:420px}
+.hero-btns{display:flex;gap:1rem;flex-wrap:wrap}
+.btn-primary{background:linear-gradient(135deg,var(--purple),var(--purple-mid));color:#fff;
+  padding:.75rem 1.8rem;border-radius:10px;font-weight:700;font-size:1rem;border:none;cursor:pointer;
+  transition:transform .2s,box-shadow .2s;box-shadow:0 4px 14px rgba(109,40,217,.35)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(109,40,217,.45)}
+.btn-secondary{background:var(--white);color:var(--purple);padding:.75rem 1.8rem;border-radius:10px;
+  font-weight:600;font-size:1rem;border:2px solid var(--purple);cursor:pointer;transition:all .2s}
+.btn-secondary:hover{background:var(--purple-light)}
 
-/* ── APP ── */
-#app{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:20px 16px;}
+/* Floating blobs */
+.blob{position:absolute;border-radius:50%;opacity:.18;animation:float 6s ease-in-out infinite}
+.blob1{width:300px;height:300px;background:var(--purple);top:-80px;right:30%;animation-delay:0s}
+.blob2{width:200px;height:200px;background:var(--green);bottom:-60px;right:10%;animation-delay:2s}
+.blob3{width:150px;height:150px;background:var(--purple-mid);top:40%;left:5%;animation-delay:4s}
+@keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-20px) scale(1.05)}}
 
-/* ══════════════════════════════════
-   HEADER
-══════════════════════════════════ */
-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 22px;margin-bottom:18px;
-  background:linear-gradient(135deg,rgba(8,13,26,.97),rgba(12,18,32,.97));
-  border:1px solid rgba(0,229,255,.12);border-radius:18px;
-  backdrop-filter:blur(24px);
-  box-shadow:0 0 0 1px rgba(0,229,255,.04),0 8px 32px rgba(0,0,0,.6),inset 0 1px 0 rgba(0,229,255,.08);
-  animation:hdrIn .5s cubic-bezier(.2,0,0,1);
-}
-@keyframes hdrIn{from{opacity:0;transform:translateY(-16px);}to{opacity:1;transform:translateY(0);}}
+.hero-right{z-index:2;flex-shrink:0}
 
-.logo{display:flex;align-items:center;gap:14px;}
-.logo-icon{
-  width:44px;height:44px;border-radius:12px;
-  background:linear-gradient(135deg,var(--accent),var(--a2));
-  display:flex;align-items:center;justify-content:center;font-size:20px;
-  box-shadow:0 0 20px rgba(0,229,255,.4),0 0 60px rgba(0,229,255,.1);
-  animation:iconPulse 3s ease-in-out infinite;
-}
-@keyframes iconPulse{
-  0%,100%{box-shadow:0 0 20px rgba(0,229,255,.4),0 0 60px rgba(0,229,255,.1);}
-  50%{box-shadow:0 0 30px rgba(0,229,255,.7),0 0 80px rgba(0,229,255,.2);}
-}
-.logo-text h1{
-  font-size:1.15rem;font-weight:800;letter-spacing:-.3px;
-  background:linear-gradient(90deg,var(--accent),var(--a2));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-}
-.logo-text span{font-size:.68rem;color:var(--muted);font-family:var(--mono);}
+/* SECTIONS */
+.section{padding:4rem 2rem;max-width:1200px;margin:0 auto}
+.section-title{font-size:2rem;font-weight:800;letter-spacing:-.5px;margin-bottom:.5rem}
+.section-sub{color:var(--muted);font-size:1rem;margin-bottom:2.5rem}
 
-.hdr-pills{display:flex;gap:10px;align-items:center;}
-.pill{
-  display:flex;align-items:center;gap:6px;padding:6px 14px;
-  border-radius:20px;font-size:.72rem;font-family:var(--mono);
-  border:1px solid;backdrop-filter:blur(8px);
-}
-.pill-live{background:rgba(0,255,157,.06);border-color:rgba(0,255,157,.2);color:var(--green);}
-.pill-time{background:rgba(0,229,255,.06);border-color:rgba(0,229,255,.15);color:var(--accent);}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.4s ease-in-out infinite;}
-@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 8px var(--green);}50%{opacity:.2;box-shadow:none;}}
+/* TASK CARDS */
+.tasks-section{background:var(--white);padding:4rem 2rem}
+.tasks-inner{max-width:1200px;margin:0 auto}
+.tasks-scroll{display:flex;gap:1.5rem;overflow-x:auto;padding-bottom:1rem;scroll-snap-type:x mandatory}
+.tasks-scroll::-webkit-scrollbar{height:6px}
+.tasks-scroll::-webkit-scrollbar-track{background:#f1f1f1;border-radius:3px}
+.tasks-scroll::-webkit-scrollbar-thumb{background:var(--purple-mid);border-radius:3px}
+.task-card{min-width:280px;background:var(--white);border-radius:16px;padding:1.5rem;
+  box-shadow:var(--card-shadow);border:2px solid transparent;cursor:pointer;
+  transition:border-color .2s,transform .2s,box-shadow .2s;scroll-snap-align:start;flex-shrink:0}
+.task-card:hover{border-color:var(--purple);transform:translateY(-4px);box-shadow:0 8px 32px rgba(109,40,217,.15)}
+.task-card.selected{border-color:var(--purple);background:var(--purple-light)}
+.task-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem}
+.task-name{font-size:1rem;font-weight:700;color:var(--text);line-height:1.3}
+.alert-badge{background:var(--purple);color:#fff;font-size:.72rem;font-weight:700;
+  padding:.2rem .6rem;border-radius:20px;white-space:nowrap}
+.stars{color:var(--yellow);font-size:.9rem;margin-bottom:.8rem}
+.grade-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.2rem}
+.chip{background:var(--purple-light);color:var(--purple);font-size:.7rem;font-weight:600;
+  padding:.2rem .6rem;border-radius:20px}
+.btn-play{width:100%;background:linear-gradient(135deg,var(--purple),var(--purple-mid));
+  color:#fff;border:none;border-radius:10px;padding:.6rem;font-weight:700;font-size:.9rem;
+  cursor:pointer;transition:transform .2s,box-shadow .2s}
+.btn-play:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(109,40,217,.4)}
 
-/* ══════════════════════════════════
-   TASK BAR
-══════════════════════════════════ */
-.task-bar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;align-items:center;}
-.task-btn{
-  padding:7px 15px;border:1px solid var(--border);border-radius:8px;
-  background:rgba(8,13,26,.8);color:var(--muted);cursor:pointer;
-  font-size:.75rem;font-weight:600;font-family:var(--mono);
-  transition:all .18s;letter-spacing:.3px;
-}
-.task-btn:hover{border-color:rgba(0,229,255,.3);color:var(--text);transform:translateY(-1px);}
-.task-btn.active{
-  border-color:var(--accent);color:var(--accent);
-  background:rgba(0,229,255,.07);
-  box-shadow:0 0 14px rgba(0,229,255,.15);
-}
-.btn-start{
-  margin-left:auto;padding:8px 22px;
-  background:linear-gradient(135deg,var(--accent),var(--a2));
-  border:none;border-radius:9px;color:#fff;font-size:.82rem;font-weight:700;
-  cursor:pointer;transition:all .2s;letter-spacing:.3px;
-  box-shadow:0 4px 20px rgba(0,229,255,.25);
-}
-.btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,229,255,.45);}
+/* ALERT CATEGORIES */
+.categories-section{padding:4rem 2rem;background:var(--bg)}
+.categories-inner{max-width:1200px;margin:0 auto}
+.categories-grid{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-top:2rem}
+.cat-card{display:flex;flex-direction:column;align-items:center;gap:.8rem;cursor:pointer;
+  transition:transform .2s}
+.cat-card:hover{transform:translateY(-4px)}
+.cat-circle{width:90px;height:90px;border-radius:50%;background:var(--purple-light);
+  display:flex;align-items:center;justify-content:center;font-size:2rem;
+  box-shadow:0 4px 16px rgba(109,40,217,.15);transition:background .2s}
+.cat-card:hover .cat-circle{background:#ddd6fe}
+.cat-label{font-size:.85rem;font-weight:600;color:var(--text)}
 
-/* ══════════════════════════════════
-   LAYOUT
-══════════════════════════════════ */
-.grid{display:grid;grid-template-columns:1fr 340px;gap:16px;}
-@media(max-width:860px){.grid{grid-template-columns:1fr;}}
+/* TRIAGE INTERFACE */
+.triage-section{display:none;padding:2rem;background:var(--bg)}
+.triage-inner{max-width:1200px;margin:0 auto}
+.triage-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
+.triage-title{font-size:1.4rem;font-weight:800}
+.progress-wrap{margin-bottom:1.5rem}
+.progress-label{font-size:.8rem;color:var(--muted);margin-bottom:.4rem;display:flex;justify-content:space-between}
+.progress-bar{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--green));
+  border-radius:4px;transition:width .5s ease}
+.triage-grid{display:grid;grid-template-columns:60% 40%;gap:1.5rem}
+@media(max-width:768px){.triage-grid{grid-template-columns:1fr}}
 
-/* ══════════════════════════════════
-   CARDS
-══════════════════════════════════ */
-.card{
-  background:linear-gradient(145deg,rgba(8,13,26,.96),rgba(12,18,32,.94));
-  border:1px solid var(--border);border-radius:16px;padding:18px;
-  backdrop-filter:blur(16px);
-  box-shadow:0 4px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.03);
-  transition:border-color .25s;
-}
-.card:hover{border-color:rgba(0,229,255,.1);}
-.card+.card{margin-top:14px;}
-.ct{
-  font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1.8px;
-  color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;
-}
-.ct-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);}
+/* ALERT CARD */
+.alert-card{background:var(--white);border-radius:16px;padding:1.5rem;box-shadow:var(--card-shadow);
+  border-left:5px solid var(--purple);animation:slideIn .4s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+.alert-meta{display:flex;gap:.8rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap}
+.source-badge{background:var(--purple-light);color:var(--purple);font-size:.75rem;font-weight:700;
+  padding:.25rem .7rem;border-radius:20px}
+.ts-badge{color:var(--muted);font-size:.75rem}
+.alert-id{color:var(--muted);font-size:.75rem;font-family:monospace}
+.alert-title{font-size:1.4rem;font-weight:800;margin-bottom:.8rem;line-height:1.3}
+.alert-body{color:#374151;font-size:.95rem;line-height:1.7;white-space:pre-wrap}
+.persona-box{margin-top:1rem;padding:.8rem 1rem;background:#f0fdf4;border-radius:10px;
+  border-left:3px solid var(--green);font-size:.85rem;color:#065f46}
+.persona-label{font-weight:700;margin-bottom:.2rem;color:var(--green)}
+.hint-btn{margin-top:1rem;background:none;border:1.5px solid var(--purple-mid);color:var(--purple);
+  padding:.4rem 1rem;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s}
+.hint-btn:hover{background:var(--purple-light)}
+.hint-box{margin-top:.8rem;padding:.8rem 1rem;background:#faf5ff;border-radius:10px;
+  border-left:3px solid var(--purple-mid);font-size:.85rem;color:#5b21b6;display:none}
 
-/* ══════════════════════════════════
-   PROGRESS
-══════════════════════════════════ */
-.prog-row{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);font-family:var(--mono);margin-bottom:7px;}
-.prog-track{height:3px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden;}
-.prog-fill{
-  height:100%;border-radius:2px;
-  background:linear-gradient(90deg,var(--accent),var(--a2));
-  transition:width .7s cubic-bezier(.4,0,.2,1);
-  box-shadow:0 0 10px rgba(0,229,255,.5);
-}
+/* FORM PANEL */
+.form-panel{background:var(--white);border-radius:16px;padding:1.5rem;box-shadow:var(--card-shadow)}
+.form-section-title{font-size:.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.8px;margin-bottom:.8rem}
+.sev-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.5rem}
+.sev-btn{padding:.7rem;border-radius:10px;border:none;color:#fff;font-weight:800;font-size:1rem;
+  cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .15s;opacity:.7}
+.sev-btn:hover{transform:scale(1.04);opacity:1}
+.sev-btn.active{opacity:1;box-shadow:0 4px 14px rgba(0,0,0,.25);transform:scale(1.04)}
+.sev-p1{background:#ef4444}.sev-p2{background:#f97316}.sev-p3{background:#f59e0b}.sev-p4{background:#10b981}
+.form-group{margin-bottom:1.2rem}
+.form-label{font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:.4rem;display:block}
+select,textarea{width:100%;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Inter',sans-serif;font-size:.9rem;color:var(--text);background:var(--white);
+  transition:border-color .2s;outline:none}
+select:focus,textarea:focus{border-color:var(--purple)}
+textarea{resize:vertical;min-height:80px}
+.checkbox-row{display:flex;align-items:center;gap:.6rem;margin-bottom:1.2rem}
+.checkbox-row input{width:16px;height:16px;accent-color:var(--purple)}
+.checkbox-row label{font-size:.9rem;font-weight:500}
+.btn-submit{width:100%;background:linear-gradient(135deg,var(--purple),var(--purple-mid));
+  color:#fff;border:none;border-radius:10px;padding:.8rem;font-weight:700;font-size:1rem;
+  cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 14px rgba(109,40,217,.35)}
+.btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(109,40,217,.45)}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
-/* ══════════════════════════════════
-   ALERT BOX
-══════════════════════════════════ */
-.alert-wrap{
-  background:rgba(3,5,13,.7);border:1px solid var(--border);
-  border-radius:12px;padding:18px;margin-bottom:12px;
-  position:relative;overflow:hidden;min-height:120px;
-}
-.alert-wrap::before{
-  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
-  background:linear-gradient(to bottom,var(--accent),var(--a2),var(--a3));
-}
-.alert-wrap.flash{animation:alertFlash .5s cubic-bezier(.34,1.56,.64,1);}
-@keyframes alertFlash{
-  0%{opacity:0;transform:translateX(-8px) scale(.98);}
-  100%{opacity:1;transform:translateX(0) scale(1);}
-}
-.a-src{font-size:.62rem;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;display:flex;align-items:center;gap:8px;}
-.a-src-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:blink 1.4s ease-in-out infinite;}
-.a-title{font-size:.98rem;font-weight:700;margin-bottom:9px;line-height:1.4;}
-.a-body{font-size:.8rem;color:#7a8fa8;line-height:1.75;font-family:var(--mono);}
-.a-tags{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap;}
-.tag{padding:3px 9px;border-radius:5px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;}
-.tag-step{background:rgba(0,229,255,.08);color:var(--accent);border:1px solid rgba(0,229,255,.15);}
-.tag-task{background:rgba(124,58,237,.08);color:#a78bfa;border:1px solid rgba(124,58,237,.15);}
-.tag-persona{background:rgba(255,0,128,.08);color:#ff80bf;border:1px solid rgba(255,0,128,.15);}
-.cascade{
-  margin-top:10px;padding:8px 12px;
-  background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.1);
-  border-radius:8px;font-size:.72rem;color:var(--accent);font-family:var(--mono);
-}
+/* STATS BAR */
+.stats-bar{background:var(--white);border-radius:16px;padding:1rem 1.5rem;
+  box-shadow:var(--card-shadow);display:flex;gap:2rem;align-items:center;
+  margin-top:1.5rem;flex-wrap:wrap}
+.stat-item{display:flex;flex-direction:column;align-items:center;gap:.2rem}
+.stat-val{font-size:1.4rem;font-weight:800;color:var(--purple)}
+.stat-lbl{font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.stat-divider{width:1px;height:40px;background:var(--border)}
 
-/* ══════════════════════════════════
-   SEVERITY BUTTONS
-══════════════════════════════════ */
-.sev-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:13px;}
-.sev-btn{
-  padding:11px 4px;border-radius:10px;border:1px solid var(--border);
-  background:rgba(3,5,13,.8);color:var(--muted);cursor:pointer;
-  font-size:.85rem;font-weight:800;text-align:center;transition:all .18s;
-  font-family:var(--mono);
-}
-.sev-btn small{display:block;font-size:.58rem;font-weight:500;margin-top:3px;letter-spacing:.3px;}
-.sev-btn:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.15);}
-.sev-btn.s-P1{background:rgba(255,45,85,.12);border-color:var(--p1);color:var(--p1);box-shadow:0 0 18px rgba(255,45,85,.25),inset 0 0 20px rgba(255,45,85,.05);}
-.sev-btn.s-P2{background:rgba(255,107,0,.12);border-color:var(--p2);color:var(--p2);box-shadow:0 0 18px rgba(255,107,0,.25),inset 0 0 20px rgba(255,107,0,.05);}
-.sev-btn.s-P3{background:rgba(255,230,0,.12);border-color:var(--p3);color:var(--p3);box-shadow:0 0 18px rgba(255,230,0,.25),inset 0 0 20px rgba(255,230,0,.05);}
-.sev-btn.s-P4{background:rgba(0,255,157,.12);border-color:var(--p4);color:var(--p4);box-shadow:0 0 18px rgba(0,255,157,.25),inset 0 0 20px rgba(0,255,157,.05);}
+/* RESULT TOAST */
+.result-toast{position:fixed;top:80px;right:1.5rem;z-index:200;background:var(--white);
+  border-radius:16px;padding:1.2rem 1.5rem;box-shadow:0 8px 32px rgba(0,0,0,.15);
+  min-width:300px;max-width:380px;border-left:5px solid var(--green);
+  transform:translateX(120%);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
+.result-toast.show{transform:translateX(0)}
+.toast-score{font-size:1.5rem;font-weight:900;margin-bottom:.5rem}
+.toast-breakdown{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.6rem}
+.toast-chip{font-size:.75rem;font-weight:600;padding:.2rem .6rem;border-radius:20px}
+.chip-ok{background:#d1fae5;color:#065f46}.chip-bad{background:#fee2e2;color:#991b1b}
+.toast-explain{font-size:.82rem;color:var(--muted);line-height:1.5}
 
-/* ══════════════════════════════════
-   FORM
-══════════════════════════════════ */
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
-.fg{display:flex;flex-direction:column;gap:5px;}
-.fl{font-size:.63rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;}
-select,textarea{
-  background:rgba(3,5,13,.9);border:1px solid var(--border);border-radius:8px;
-  color:var(--text);padding:9px 11px;font-size:.82rem;font-family:var(--mono);
-  outline:none;transition:border-color .2s,box-shadow .2s;width:100%;
-}
-select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.08);}
-textarea{resize:vertical;min-height:70px;}
-.fp-row{
-  display:flex;align-items:center;gap:10px;padding:9px 12px;
-  background:rgba(3,5,13,.8);border:1px solid var(--border);border-radius:8px;
-  margin-bottom:12px;font-size:.82rem;
-}
-.fp-row input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
+/* TIMELINE */
+.timeline-wrap{margin-top:1.5rem;overflow-x:auto;padding-bottom:.5rem}
+.timeline{display:flex;gap:0;align-items:center;min-width:max-content;padding:.5rem 0}
+.tl-item{display:flex;flex-direction:column;align-items:center;gap:.3rem;position:relative}
+.tl-item:not(:last-child)::after{content:'';position:absolute;top:12px;left:50%;width:100%;
+  height:2px;background:var(--border);z-index:0}
+.tl-dot{width:24px;height:24px;border-radius:50%;border:3px solid var(--white);
+  box-shadow:0 2px 8px rgba(0,0,0,.15);z-index:1;position:relative;cursor:pointer;
+  transition:transform .2s}
+.tl-dot:hover{transform:scale(1.3)}
+.tl-label{font-size:.65rem;color:var(--muted);font-weight:600;white-space:nowrap}
+.tl-sev{font-size:.6rem;font-weight:700;color:var(--white);display:flex;align-items:center;
+  justify-content:center;width:100%;height:100%;border-radius:50%}
 
-/* ══════════════════════════════════
-   SUBMIT BUTTON
-══════════════════════════════════ */
-.btn-submit{
-  width:100%;padding:13px;
-  background:linear-gradient(135deg,var(--accent),var(--a2));
-  border:none;border-radius:10px;color:#fff;font-size:.88rem;font-weight:700;
-  cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
-  box-shadow:0 4px 20px rgba(0,229,255,.2);letter-spacing:.3px;
-}
-.btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,229,255,.4);}
-.btn-submit:active{transform:translateY(0);}
-.btn-submit:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;}
-.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.2);transform:scale(0);animation:rip .6s linear;pointer-events:none;}
-@keyframes rip{to{transform:scale(4);opacity:0;}}
+/* POST-MORTEM */
+.autopsy-section{display:none;padding:2rem;background:var(--bg)}
+.autopsy-inner{max-width:1200px;margin:0 auto}
+.autopsy-card{background:var(--white);border-radius:20px;padding:2.5rem;box-shadow:var(--card-shadow)}
+.grade-display{font-size:6rem;font-weight:900;line-height:1;margin-bottom:.5rem}
+.grade-s{color:var(--green)}.grade-a{color:var(--purple)}.grade-b{color:#3b82f6}
+.grade-c{color:var(--yellow)}.grade-d{color:var(--red)}
+.verdict-text{font-size:1.1rem;color:var(--muted);margin-bottom:2rem;line-height:1.6}
+.autopsy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem}
+.mistake-card{background:#fff5f5;border-radius:12px;padding:1.2rem;border-left:4px solid var(--red)}
+.mistake-title{font-weight:700;margin-bottom:.4rem;font-size:.95rem}
+.mistake-wrong{font-size:.82rem;color:var(--red);margin-bottom:.3rem}
+.mistake-fix{font-size:.82rem;color:#065f46;background:#d1fae5;padding:.3rem .6rem;border-radius:6px}
+.perfect-card{background:#f0fdf4;border-radius:12px;padding:1rem;border-left:4px solid var(--green)}
+.perfect-title{font-weight:600;font-size:.9rem;color:#065f46}
 
-/* ══════════════════════════════════
-   RESULT
-══════════════════════════════════ */
-.result-box{border-radius:12px;padding:15px;margin-top:13px;border:1px solid;display:none;}
-.result-box.show{display:block;animation:resIn .4s cubic-bezier(.34,1.56,.64,1);}
-@keyframes resIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
-.result-box.good{background:rgba(0,255,157,.06);border-color:rgba(0,255,157,.25);}
-.result-box.partial{background:rgba(255,230,0,.06);border-color:rgba(255,230,0,.25);}
-.result-box.bad{background:rgba(255,45,85,.06);border-color:rgba(255,45,85,.25);}
-.res-score{font-size:2rem;font-weight:900;font-family:var(--mono);margin-bottom:6px;}
-.bdown{display:flex;gap:6px;flex-wrap:wrap;}
-.bc{padding:4px 10px;border-radius:5px;font-size:.68rem;font-weight:700;font-family:var(--mono);}
-.bc.ok{background:rgba(0,255,157,.12);color:var(--green);}
-.bc.half{background:rgba(255,230,0,.12);color:var(--yellow);}
-.bc.fail{background:rgba(255,45,85,.12);color:var(--red);}
+/* LEADERBOARD */
+.lb-section{padding:4rem 2rem;background:var(--white)}
+.lb-inner{max-width:900px;margin:0 auto}
+.lb-table{width:100%;border-collapse:collapse;margin-top:1.5rem}
+.lb-table th{text-align:left;padding:.8rem 1rem;font-size:.78rem;font-weight:700;
+  color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border)}
+.lb-table td{padding:.9rem 1rem;border-bottom:1px solid var(--border);font-size:.9rem}
+.lb-table tr:hover td{background:#faf5ff}
+.lb-table tr.top1 td{background:#fef9c3;font-weight:700}
+.lb-table tr.top2 td{background:#f0f9ff}
+.lb-table tr.top3 td{background:#f0fdf4}
+.rank-medal{font-size:1.1rem}
+.grade-pill{display:inline-block;padding:.15rem .5rem;border-radius:6px;font-size:.75rem;font-weight:700}
+.gp-s{background:#d1fae5;color:#065f46}.gp-a{background:#ede9fe;color:#5b21b6}
+.gp-b{background:#dbeafe;color:#1e40af}.gp-c{background:#fef3c7;color:#92400e}
+.gp-d{background:#fee2e2;color:#991b1b}
 
-/* ══════════════════════════════════
-   HINT
-══════════════════════════════════ */
-.hint-box{
-  background:rgba(255,230,0,.05);border:1px solid rgba(255,230,0,.15);
-  border-radius:9px;padding:11px 13px;font-size:.78rem;line-height:1.65;
-  color:#ffe066;font-family:var(--mono);display:none;
+/* DONE MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;
+  display:none;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--white);border-radius:24px;padding:3rem 2.5rem;max-width:480px;width:90%;
+  text-align:center;position:relative;overflow:hidden;animation:popIn .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes popIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+.confetti-wrap{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti-piece{position:absolute;width:10px;height:10px;border-radius:2px;
+  animation:confettiFall 3s ease-in infinite}
+@keyframes confettiFall{
+  0%{transform:translateY(-20px) rotate(0deg);opacity:1}
+  100%{transform:translateY(500px) rotate(720deg);opacity:0}
 }
-.hint-box.show{display:block;animation:fadeUp .3s ease;}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
-.hint-btn{
-  display:none;margin-top:8px;padding:6px 14px;
-  background:rgba(255,230,0,.06);border:1px solid rgba(255,230,0,.15);
-  border-radius:7px;color:#ffe066;cursor:pointer;font-size:.72rem;
-  font-family:var(--mono);transition:all .2s;
-}
-.hint-btn:hover{background:rgba(255,230,0,.12);}
+.modal-grade{font-size:5rem;font-weight:900;margin-bottom:.5rem}
+.modal-score{font-size:2rem;font-weight:800;color:var(--purple);margin-bottom:.5rem}
+.modal-verdict{color:var(--muted);margin-bottom:1.5rem;font-size:.95rem}
+.modal-input{width:100%;padding:.7rem 1rem;border:1.5px solid var(--border);border-radius:10px;
+  font-family:'Inter',sans-serif;font-size:.95rem;margin-bottom:1rem;outline:none}
+.modal-input:focus{border-color:var(--purple)}
+.modal-btns{display:flex;gap:.8rem;justify-content:center}
 
-/* ══════════════════════════════════
-   RIGHT PANEL
-══════════════════════════════════ */
-.right{display:flex;flex-direction:column;gap:14px;}
+/* TOAST NOTIFICATION */
+.toast-notif{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(100px);
+  background:#1f2937;color:#fff;padding:.7rem 1.5rem;border-radius:10px;font-size:.85rem;
+  font-weight:500;z-index:400;transition:transform .3s ease;white-space:nowrap}
+.toast-notif.show{transform:translateX(-50%) translateY(0)}
 
-/* ── STREAK ── */
-.streak-card{
-  padding:20px 16px;text-align:center;
-  background:linear-gradient(145deg,rgba(8,13,26,.97),rgba(12,18,32,.95));
-  border:1px solid rgba(0,229,255,.15);border-radius:16px;
-  position:relative;overflow:hidden;
-  box-shadow:0 0 40px rgba(0,229,255,.06);
-}
-.streak-card::before{
-  content:'';position:absolute;top:-40px;left:50%;transform:translateX(-50%);
-  width:200px;height:200px;border-radius:50%;
-  background:radial-gradient(circle,rgba(0,229,255,.08),transparent 70%);
-  pointer-events:none;
-}
-#streakCanvas{width:100%;height:70px;display:block;margin-bottom:6px;}
-.streak-num{
-  font-size:3.8rem;font-weight:900;line-height:1;font-family:var(--mono);
-  background:linear-gradient(135deg,var(--accent),var(--a2));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-}
-.streak-num.bump{animation:bump .4s cubic-bezier(.34,1.56,.64,1);}
-@keyframes bump{0%{transform:scale(1);}50%{transform:scale(1.35);}100%{transform:scale(1);}}
-.streak-sub{font-size:.68rem;color:var(--muted);margin-top:4px;font-family:var(--mono);}
-.streak-best{font-size:.75rem;color:var(--a2);margin-top:5px;}
+/* HOW IT WORKS */
+.how-section{padding:4rem 2rem;background:var(--purple-light)}
+.how-inner{max-width:1000px;margin:0 auto;text-align:center}
+.how-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-top:2.5rem}
+.how-step{background:var(--white);border-radius:16px;padding:1.5rem;box-shadow:var(--card-shadow)}
+.how-num{width:40px;height:40px;border-radius:50%;background:var(--purple);color:#fff;
+  font-weight:800;font-size:1rem;display:flex;align-items:center;justify-content:center;margin:0 auto .8rem}
+.how-step h3{font-size:.95rem;font-weight:700;margin-bottom:.4rem}
+.how-step p{font-size:.82rem;color:var(--muted);line-height:1.5}
 
-/* ── TIMELINE ── */
-.tl{max-height:240px;overflow-y:auto;}
-.tl::-webkit-scrollbar{width:2px;}
-.tl::-webkit-scrollbar-thumb{background:var(--border);border-radius:1px;}
-.tl-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:.74rem;animation:fadeUp .3s ease;}
-.tl-item:last-child{border-bottom:none;}
-.tl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.tl-dot.ok{background:var(--green);box-shadow:0 0 7px var(--green);}
-.tl-dot.half{background:var(--yellow);box-shadow:0 0 7px var(--yellow);}
-.tl-dot.fail{background:var(--red);box-shadow:0 0 7px var(--red);}
-.tl-title{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#8899aa;}
-.tl-score{color:var(--muted);flex-shrink:0;font-family:var(--mono);font-size:.7rem;}
+/* FOOTER */
+footer{background:#111827;color:#9ca3af;text-align:center;padding:1.5rem;font-size:.82rem}
+footer span{color:var(--purple-mid)}
 
-/* ── ANALYTICS CHART ── */
-#analyticsCanvas{width:100%;height:110px;display:block;}
-
-/* ── LEADERBOARD ── */
-.lb-row{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:.76rem;animation:fadeUp .3s ease;}
-.lb-row:last-child{border-bottom:none;}
-.lb-rank{width:20px;text-align:center;font-weight:800;font-family:var(--mono);}
-.lb-rank.g{color:#fbbf24;text-shadow:0 0 10px #fbbf24;}
-.lb-rank.s{color:#94a3b8;}
-.lb-rank.b{color:#b45309;}
-.lb-name{flex:1;font-weight:500;}
-.lb-grade{padding:2px 6px;border-radius:4px;font-size:.62rem;font-weight:800;background:rgba(0,229,255,.08);color:var(--accent);font-family:var(--mono);}
-.lb-score{color:var(--a2);font-weight:700;font-family:var(--mono);}
-
-/* ── AUTOPSY ── */
-.autopsy-header{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
-.astat{
-  flex:1;min-width:70px;padding:10px;border-radius:10px;text-align:center;
-  border:1px solid;
-}
-.astat.grade{background:rgba(0,229,255,.06);border-color:rgba(0,229,255,.15);}
-.astat.score{background:rgba(0,255,157,.06);border-color:rgba(0,255,157,.15);}
-.astat.err{background:rgba(255,45,85,.06);border-color:rgba(255,45,85,.15);}
-.astat-val{font-size:1.8rem;font-weight:900;font-family:var(--mono);}
-.astat.grade .astat-val{color:var(--accent);}
-.astat.score .astat-val{color:var(--green);}
-.astat.err .astat-val{color:var(--red);}
-.astat-lbl{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
-.verdict{font-size:.78rem;color:var(--a2);font-style:italic;margin-bottom:12px;padding:8px 12px;background:rgba(124,58,237,.06);border-radius:8px;border:1px solid rgba(124,58,237,.1);}
-.a-item{padding:10px 12px;border-radius:9px;margin-bottom:7px;border:1px solid;}
-.a-item.bad{background:rgba(255,45,85,.05);border-color:rgba(255,45,85,.12);}
-.a-item.ok{background:rgba(0,255,157,.05);border-color:rgba(0,255,157,.12);}
-.a-item-title{font-weight:600;font-size:.78rem;margin-bottom:4px;}
-.a-item-reason{color:#6b7f94;font-size:.73rem;line-height:1.55;}
-.a-item-fix{color:var(--accent);font-size:.7rem;margin-top:5px;font-family:var(--mono);}
-
-/* ── DONE OVERLAY ── */
-.done-overlay{position:fixed;inset:0;z-index:100;background:rgba(3,5,13,.93);backdrop-filter:blur(16px);display:none;align-items:center;justify-content:center;}
-.done-overlay.show{display:flex;animation:fadeUp .4s ease;}
-.done-card{
-  background:linear-gradient(145deg,rgba(8,13,26,.99),rgba(12,18,32,.99));
-  border:1px solid rgba(0,229,255,.2);border-radius:22px;padding:40px;
-  text-align:center;max-width:440px;width:90%;
-  box-shadow:0 0 80px rgba(0,229,255,.12),0 0 0 1px rgba(0,229,255,.05);
-  animation:resIn .5s cubic-bezier(.34,1.56,.64,1);
-}
-.done-emoji{font-size:4rem;display:block;margin-bottom:14px;}
-.done-score{
-  font-size:4.5rem;font-weight:900;font-family:var(--mono);
-  background:linear-gradient(135deg,var(--accent),var(--a2));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-}
-.done-lbl{color:var(--muted);margin:8px 0 18px;font-size:.85rem;}
-.save-form{display:flex;gap:8px;margin-top:14px;}
-.save-form input{
-  flex:1;background:rgba(3,5,13,.9);border:1px solid var(--border);
-  border-radius:8px;color:var(--text);padding:9px 12px;font-size:.83rem;
-  font-family:var(--mono);outline:none;
-}
-.save-form input:focus{border-color:var(--accent);}
-.btn-save{
-  padding:9px 18px;border-radius:8px;
-  background:linear-gradient(135deg,var(--accent),var(--a2));
-  border:none;color:#fff;cursor:pointer;font-size:.83rem;font-weight:700;transition:all .2s;
-}
-.btn-save:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,229,255,.35);}
-.done-btns{display:flex;gap:9px;justify-content:center;margin-top:12px;flex-wrap:wrap;}
-.btn-sec{padding:9px 18px;border-radius:8px;border:1px solid var(--border);background:rgba(8,13,26,.8);color:var(--text);cursor:pointer;font-size:.82rem;transition:all .2s;}
-.btn-sec:hover{border-color:var(--accent);}
-
-/* ── TOAST ── */
-.toast{
-  position:fixed;bottom:22px;right:22px;z-index:200;
-  padding:11px 18px;border-radius:10px;
-  background:rgba(8,13,26,.97);border:1px solid var(--border);
-  font-size:.8rem;font-family:var(--mono);
-  box-shadow:0 8px 32px rgba(0,0,0,.6);
-  transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);
-  max-width:280px;
-}
-.toast.show{transform:translateY(0);opacity:1;}
-
-/* ── SPINNER ── */
-.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.15);border-top-color:#fff;border-radius:50%;animation:spinA .7s linear infinite;display:inline-block;vertical-align:middle;}
-@keyframes spinA{to{transform:rotate(360deg);}}
-
-/* ── EMPTY ── */
-.empty{text-align:center;padding:26px;color:var(--muted);font-size:.8rem;}
-.empty .ei{font-size:1.8rem;display:block;margin-bottom:7px;}
+/* UTILITY */
+.hidden{display:none!important}
+.text-green{color:var(--green)}.text-red{color:var(--red)}.text-yellow{color:var(--yellow)}
+.fw-bold{font-weight:700}
 </style>
 </head>
 <body>
-<canvas id="bgCanvas"></canvas>
 
-<div id="app">
-  <header>
-    <div class="logo">
-      <div class="logo-icon">🛡️</div>
-      <div class="logo-text">
-        <h1>Incident Response</h1>
-        <span>OpenEnv · Team BitShift · v2.0</span>
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-logo">⚡ BitShift IR</div>
+  <div class="nav-links">
+    <a href="#tasks-section" onclick="scrollTo('#tasks-section')">Tasks</a>
+    <a href="#lb-section" onclick="scrollTo('#lb-section')">Leaderboard</a>
+    <a href="#how-section">How it Works</a>
+    <a href="#tasks-section" class="nav-cta">Start Triaging →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="blob blob3"></div>
+  <div class="hero-left">
+    <div class="hero-badge">🚨 Live Incident Simulation</div>
+    <h1>Triage Incidents<br/>Like a <span>Pro SRE</span></h1>
+    <p class="hero-sub">Step into the shoes of a Site Reliability Engineer. Classify alerts, route incidents, and earn your grade — all in real-time simulated chaos.</p>
+    <div class="hero-btns">
+      <button class="btn-primary" onclick="document.getElementById('tasks-section').scrollIntoView({behavior:'smooth'})">Start Triaging →</button>
+      <button class="btn-secondary" onclick="document.getElementById('how-section').scrollIntoView({behavior:'smooth'})">How it Works</button>
+    </div>
+  </div>
+  <div class="hero-right">
+    <!-- Inline SVG: server dashboard illustration -->
+    <svg width="380" height="300" viewBox="0 0 380 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Monitor -->
+      <rect x="80" y="30" width="220" height="150" rx="12" fill="#ffffff" stroke="#6d28d9" stroke-width="2.5"/>
+      <rect x="90" y="40" width="200" height="130" rx="8" fill="#f5f3ff"/>
+      <!-- Screen content: alert lines -->
+      <rect x="100" y="55" width="80" height="10" rx="4" fill="#ef4444" opacity=".8"/>
+      <rect x="190" y="55" width="50" height="10" rx="4" fill="#6d28d9" opacity=".5"/>
+      <rect x="100" y="73" width="140" height="8" rx="4" fill="#e5e7eb"/>
+      <rect x="100" y="88" width="110" height="8" rx="4" fill="#e5e7eb"/>
+      <rect x="100" y="103" width="130" height="8" rx="4" fill="#e5e7eb"/>
+      <!-- Alert icon on screen -->
+      <circle cx="255" cy="100" r="22" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+      <text x="255" y="107" text-anchor="middle" font-size="18" fill="#f59e0b">⚠</text>
+      <!-- Monitor stand -->
+      <rect x="175" y="180" width="30" height="20" rx="4" fill="#6d28d9" opacity=".4"/>
+      <rect x="155" y="198" width="70" height="8" rx="4" fill="#6d28d9" opacity=".3"/>
+
+      <!-- Server rack left -->
+      <rect x="10" y="80" width="55" height="130" rx="8" fill="#ffffff" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="18" y="92" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="50" cy="98" r="4" fill="#10b981"/>
+      <rect x="18" y="110" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="50" cy="116" r="4" fill="#10b981"/>
+      <rect x="18" y="128" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="50" cy="134" r="4" fill="#f59e0b"/>
+      <rect x="18" y="146" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="50" cy="152" r="4" fill="#ef4444"/>
+      <rect x="18" y="164" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="50" cy="170" r="4" fill="#10b981"/>
+      <text x="37" y="225" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="600">SERVER A</text>
+
+      <!-- Server rack right -->
+      <rect x="315" y="80" width="55" height="130" rx="8" fill="#ffffff" stroke="#6d28d9" stroke-width="2"/>
+      <rect x="323" y="92" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="355" cy="98" r="4" fill="#10b981"/>
+      <rect x="323" y="110" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="355" cy="116" r="4" fill="#10b981"/>
+      <rect x="323" y="128" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="355" cy="134" r="4" fill="#10b981"/>
+      <rect x="323" y="146" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="355" cy="152" r="4" fill="#f59e0b"/>
+      <rect x="323" y="164" width="39" height="12" rx="4" fill="#ede9fe"/>
+      <circle cx="355" cy="170" r="4" fill="#ef4444"/>
+      <text x="342" y="225" text-anchor="middle" font-size="9" fill="#6b7280" font-weight="600">SERVER B</text>
+
+      <!-- Network lines -->
+      <line x1="65" y1="145" x2="80" y2="145" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="300" y1="145" x2="315" y2="145" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+      <!-- Alert bubbles floating -->
+      <circle cx="130" cy="20" r="14" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5">
+        <animate attributeName="cy" values="20;12;20" dur="2.5s" repeatCount="indefinite"/>
+      </circle>
+      <text x="130" y="25" text-anchor="middle" font-size="12" fill="#ef4444">🔴</text>
+
+      <circle cx="250" cy="15" r="14" fill="#d1fae5" stroke="#10b981" stroke-width="1.5">
+        <animate attributeName="cy" values="15;7;15" dur="3s" repeatCount="indefinite"/>
+      </circle>
+      <text x="250" y="20" text-anchor="middle" font-size="12" fill="#10b981">✓</text>
+
+      <!-- Bottom labels -->
+      <text x="190" y="270" text-anchor="middle" font-size="11" fill="#6b7280" font-weight="600">Incident Response Dashboard</text>
+      <text x="190" y="285" text-anchor="middle" font-size="9" fill="#8b5cf6">Real-time alert triage simulation</text>
+    </svg>
+  </div>
+</section>
+
+<!-- TASK CARDS -->
+<section class="tasks-section" id="tasks-section">
+  <div class="tasks-inner">
+    <div class="section-title">Choose Your Mission</div>
+    <div class="section-sub">Pick a task and start triaging alerts. Each mission has unique alert types and difficulty.</div>
+    <div class="tasks-scroll" id="taskCards">
+      <div style="display:flex;align-items:center;justify-content:center;width:100%;padding:2rem;color:var(--muted)">
+        Loading missions…
       </div>
     </div>
-    <div class="hdr-pills">
-      <div class="pill pill-live"><div class="live-dot"></div><span id="hdrStatus">Standby</span></div>
-      <div class="pill pill-time">⏱ <span id="hdrTime">00:00</span></div>
+  </div>
+</section>
+
+<!-- ALERT CATEGORIES -->
+<section class="categories-section" id="categories-section">
+  <div class="categories-inner">
+    <div class="section-title" style="text-align:center">Alert Types We Cover</div>
+    <div class="section-sub" style="text-align:center">From database crashes to security breaches — train across every incident domain.</div>
+    <div class="categories-grid">
+      <div class="cat-card"><div class="cat-circle">🗄️</div><div class="cat-label">Database</div></div>
+      <div class="cat-card"><div class="cat-circle">🌐</div><div class="cat-label">Network</div></div>
+      <div class="cat-card"><div class="cat-circle">🔒</div><div class="cat-label">Security</div></div>
+      <div class="cat-card"><div class="cat-circle">⚙️</div><div class="cat-label">Application</div></div>
+      <div class="cat-card"><div class="cat-circle">🏗️</div><div class="cat-label">Infrastructure</div></div>
     </div>
-  </header>
+  </div>
+</section>
 
-  <div class="task-bar" id="taskBar"></div>
+<!-- HOW IT WORKS -->
+<section class="how-section" id="how-section">
+  <div class="how-inner">
+    <div class="section-title">How it Works</div>
+    <div class="section-sub">Four simple steps to become an incident response expert.</div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="how-num">1</div>
+        <h3>Pick a Mission</h3>
+        <p>Choose from multiple task scenarios with varying difficulty and alert types.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">2</div>
+        <h3>Read the Alert</h3>
+        <p>Analyze the incoming incident alert — source, body, context, and cascading signals.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">3</div>
+        <h3>Triage It</h3>
+        <p>Set severity (P1–P4), incident type, routing team, and status update.</p>
+      </div>
+      <div class="how-step">
+        <div class="how-num">4</div>
+        <h3>Get Graded</h3>
+        <p>Earn rewards per decision. Get a final grade and post-mortem breakdown.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <div class="grid">
-    <!-- LEFT -->
-    <div>
-      <div class="card">
-        <div class="ct"><div class="ct-dot"></div>Episode Progress</div>
-        <div class="prog-row"><span id="progLabel">Step 0 / 0</span><span id="progPct">0%</span></div>
-        <div class="prog-track"><div class="prog-fill" id="progBar" style="width:0%"></div></div>
+<!-- TRIAGE INTERFACE -->
+<section class="triage-section" id="triageSection">
+  <div class="triage-inner">
+    <div class="triage-header">
+      <div>
+        <div class="triage-title" id="triageTaskName">Incident Triage</div>
+        <div style="font-size:.82rem;color:var(--muted)" id="triagePersona"></div>
+      </div>
+      <button class="btn-secondary" onclick="exitTriage()" style="font-size:.85rem;padding:.4rem .9rem">← Back to Tasks</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="progressLabel">Step 0 of 0</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+    <div class="triage-grid">
+      <!-- LEFT: Alert Card -->
+      <div>
+        <div class="alert-card" id="alertCard">
+          <div class="alert-meta">
+            <span class="source-badge" id="alertSource">—</span>
+            <span class="ts-badge" id="alertTs">—</span>
+            <span class="alert-id" id="alertId">—</span>
+          </div>
+          <div class="alert-title" id="alertTitle">Waiting for alert…</div>
+          <div class="alert-body" id="alertBody"></div>
+          <div class="persona-box" id="personaBox" style="display:none">
+            <div class="persona-label">👤 Persona Context</div>
+            <div id="personaText"></div>
+          </div>
+          <div id="cascadeBox" style="display:none;margin-top:.8rem;padding:.8rem 1rem;background:#fff7ed;border-radius:10px;border-left:3px solid #f97316;font-size:.82rem;color:#9a3412">
+            <strong>⚡ Cascading Context:</strong> <span id="cascadeText"></span>
+          </div>
+          <button class="hint-btn" onclick="loadHint()">💡 Get Hint</button>
+          <div class="hint-box" id="hintBox"></div>
+        </div>
+
+        <!-- TIMELINE -->
+        <div style="margin-top:1.2rem">
+          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem">Decision Timeline</div>
+          <div class="timeline-wrap"><div class="timeline" id="timeline"></div></div>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="ct"><div class="ct-dot" style="background:var(--red);box-shadow:0 0 6px var(--red);"></div>Live Alert Feed</div>
-        <div class="alert-wrap" id="alertBox">
-          <div class="empty"><span class="ei">🎯</span>Select a task and click Start to begin triaging alerts.</div>
-        </div>
-        <div class="hint-box" id="hintBox"></div>
-        <button class="hint-btn" id="hintBtn" onclick="loadHint()">💡 Get Hint</button>
-      </div>
+      <!-- RIGHT: Form Panel -->
+      <div>
+        <div class="form-panel">
+          <div class="form-section-title">Severity</div>
+          <div class="sev-grid">
+            <button class="sev-btn sev-p1" onclick="setSev('P1')">P1<br/><small style="font-size:.65rem;font-weight:400">Critical</small></button>
+            <button class="sev-btn sev-p2" onclick="setSev('P2')">P2<br/><small style="font-size:.65rem;font-weight:400">High</small></button>
+            <button class="sev-btn sev-p3" onclick="setSev('P3')">P3<br/><small style="font-size:.65rem;font-weight:400">Medium</small></button>
+            <button class="sev-btn sev-p4" onclick="setSev('P4')">P4<br/><small style="font-size:.65rem;font-weight:400">Low</small></button>
+          </div>
 
-      <div class="card">
-        <div class="ct"><div class="ct-dot" style="background:var(--a2);box-shadow:0 0 6px var(--a2);"></div>Triage Decision</div>
-        <div style="font-size:.63rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;">Severity Level</div>
-        <div class="sev-grid">
-          <button class="sev-btn" data-sev="P1" onclick="setSev('P1')">P1<small>Critical</small></button>
-          <button class="sev-btn" data-sev="P2" onclick="setSev('P2')">P2<small>High</small></button>
-          <button class="sev-btn" data-sev="P3" onclick="setSev('P3')">P3<small>Medium</small></button>
-          <button class="sev-btn" data-sev="P4" onclick="setSev('P4')">P4<small>Low</small></button>
-        </div>
-        <div class="form-row">
-          <div class="fg"><div class="fl">Incident Type</div>
-            <select id="incType">
-              <option value="database">Database</option>
-              <option value="network">Network</option>
-              <option value="security">Security</option>
-              <option value="application" selected>Application</option>
-              <option value="infrastructure">Infrastructure</option>
+          <div class="form-group">
+            <label class="form-label">Incident Type</label>
+            <select id="incidentType">
+              <option value="">— Select type —</option>
+              <option value="outage">Outage</option>
+              <option value="degradation">Degradation</option>
+              <option value="security_breach">Security Breach</option>
+              <option value="data_loss">Data Loss</option>
+              <option value="latency">Latency</option>
+              <option value="error_rate">Error Rate</option>
+              <option value="capacity">Capacity</option>
+              <option value="configuration">Configuration</option>
+              <option value="dependency_failure">Dependency Failure</option>
+              <option value="false_positive">False Positive</option>
             </select>
           </div>
-          <div class="fg"><div class="fl">Route to Team</div>
-            <select id="team">
-              <option value="backend" selected>Backend</option>
-              <option value="infra">Infra</option>
-              <option value="security">Security</option>
-              <option value="database">Database</option>
+
+          <div class="form-group">
+            <label class="form-label">Route to Team</label>
+            <select id="teamSelect">
+              <option value="">— Select team —</option>
+              <option value="backend">Backend</option>
               <option value="frontend">Frontend</option>
+              <option value="infrastructure">Infrastructure</option>
+              <option value="database">Database</option>
+              <option value="security">Security</option>
+              <option value="networking">Networking</option>
+              <option value="platform">Platform</option>
+              <option value="sre">SRE</option>
+              <option value="data">Data</option>
+              <option value="ml">ML</option>
             </select>
           </div>
-        </div>
-        <div id="statusRow" class="fg" style="margin-bottom:12px;display:none;">
-          <div class="fl">Status Update</div>
-          <textarea id="statusUpdate" placeholder="Describe what's happening and what actions are being taken..."></textarea>
-        </div>
-        <div id="fpRow" class="fp-row" style="display:none;">
-          <input type="checkbox" id="fpCheck"/>
-          <label for="fpCheck" style="font-size:.82rem;color:var(--text);cursor:pointer;">Mark as False Positive</label>
-        </div>
-        <button class="btn-submit" id="submitBtn" onclick="doSubmit(event)" disabled>Submit Triage</button>
-        <div id="resultBox" class="result-box"></div>
-      </div>
 
-      <div class="card" id="autopsyCard" style="display:none;">
-        <div class="ct"><div class="ct-dot" style="background:var(--a3);box-shadow:0 0 6px var(--a3);"></div>Post-Mortem Analysis</div>
-        <div id="autopsyContent"></div>
+          <div class="form-group" id="statusGroup" style="display:none">
+            <label class="form-label">Status Update</label>
+            <textarea id="statusUpdate" placeholder="Describe what's happening and initial response…"></textarea>
+          </div>
+
+          <div class="checkbox-row" id="fpRow" style="display:none">
+            <input type="checkbox" id="isFalsePositive"/>
+            <label for="isFalsePositive">Mark as False Positive</label>
+          </div>
+
+          <button class="btn-submit" id="submitBtn" onclick="doSubmit()">Submit Triage →</button>
+        </div>
+
+        <!-- STATS BAR -->
+        <div class="stats-bar">
+          <div class="stat-item">
+            <div class="stat-val" id="statStreak">🔥 0</div>
+            <div class="stat-lbl">Streak</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-val" id="statReward">0.00</div>
+            <div class="stat-lbl">Avg Reward</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-val" id="statStep">0</div>
+            <div class="stat-lbl">Steps</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-val" id="statTimer">0s</div>
+            <div class="stat-lbl">Time</div>
+          </div>
+        </div>
       </div>
     </div>
+  </div>
+</section>
 
-    <!-- RIGHT -->
-    <div class="right">
-      <div class="streak-card">
-        <div class="ct" style="justify-content:center;"><div class="ct-dot" style="background:var(--orange);box-shadow:0 0 6px var(--orange);"></div>Streak</div>
-        <canvas id="streakCanvas"></canvas>
-        <div class="streak-num" id="streakNum">0</div>
-        <div class="streak-sub">consecutive correct</div>
-        <div class="streak-best" id="streakBest">Best: 0</div>
+<!-- POST-MORTEM -->
+<section class="autopsy-section" id="autopsySection">
+  <div class="autopsy-inner">
+    <div class="autopsy-card">
+      <div style="display:flex;align-items:flex-start;gap:2rem;flex-wrap:wrap;margin-bottom:2rem">
+        <div>
+          <div class="grade-display" id="autopsyGrade">—</div>
+          <div style="font-size:.85rem;color:var(--muted);font-weight:600">Final Grade</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:1.8rem;font-weight:800;color:var(--purple)" id="autopsyScore">—</div>
+          <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Mean Reward</div>
+          <div class="verdict-text" id="autopsyVerdict"></div>
+        </div>
       </div>
+      <div id="autopsyPerfect" style="margin-bottom:1.5rem"></div>
+      <div style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:var(--red)">⚠ Mistakes to Learn From</div>
+      <div class="autopsy-grid" id="autopsyMistakes"></div>
+      <div style="display:flex;gap:1rem;margin-top:2rem;flex-wrap:wrap">
+        <button class="btn-primary" onclick="restartFromAutopsy()">Play Again →</button>
+        <button class="btn-secondary" onclick="document.getElementById('lb-section').scrollIntoView({behavior:'smooth'})">View Leaderboard</button>
+      </div>
+    </div>
+  </div>
+</section>
 
-      <div class="card">
-        <div class="ct"><div class="ct-dot"></div>Timeline</div>
-        <div class="tl" id="timeline"><div class="empty"><span class="ei">⏳</span>No actions yet</div></div>
-      </div>
+<!-- LEADERBOARD -->
+<section class="lb-section" id="lb-section">
+  <div class="lb-inner">
+    <div class="section-title">🏆 Leaderboard</div>
+    <div class="section-sub">Top incident responders ranked by score and grade.</div>
+    <table class="lb-table">
+      <thead>
+        <tr>
+          <th>Rank</th><th>Name</th><th>Task</th><th>Score</th><th>Grade</th><th>Steps</th>
+        </tr>
+      </thead>
+      <tbody id="lbBody">
+        <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
 
-      <div class="card">
-        <div class="ct"><div class="ct-dot" style="background:var(--green);box-shadow:0 0 6px var(--green);"></div>Live Analytics</div>
-        <canvas id="analyticsCanvas"></canvas>
-        <div id="analyticsLabels" style="display:flex;justify-content:space-around;font-size:.6rem;color:var(--muted);margin-top:5px;font-family:var(--mono);"></div>
-      </div>
+<!-- HOW IT WORKS (already above) -->
 
-      <div class="card">
-        <div class="ct"><div class="ct-dot" style="background:var(--yellow);box-shadow:0 0 6px var(--yellow);"></div>Leaderboard</div>
-        <div id="leaderboard"><div class="empty"><span class="ei">🏅</span>No scores yet</div></div>
-      </div>
+<footer>
+  Built with ❤️ by <span>Team BitShift</span> · Incident Response OpenEnv · Meta Hackathon 2025
+</footer>
+
+<!-- RESULT TOAST -->
+<div class="result-toast" id="resultToast">
+  <div class="toast-score" id="toastScore">+0.00</div>
+  <div class="toast-breakdown" id="toastBreakdown"></div>
+  <div class="toast-explain" id="toastExplain"></div>
+</div>
+
+<!-- DONE MODAL -->
+<div class="modal-overlay" id="doneModal">
+  <div class="modal-box">
+    <div class="confetti-wrap" id="confettiWrap"></div>
+    <div class="modal-grade" id="modalGrade">A</div>
+    <div class="modal-score" id="modalScore">0.00</div>
+    <div class="modal-verdict" id="modalVerdict">Episode complete!</div>
+    <input class="modal-input" id="playerName" placeholder="Enter your name for the leaderboard…" maxlength="32"/>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="saveScore()">Save Score 🏆</button>
+      <button class="btn-secondary" onclick="closeDoneModal()">Skip</button>
     </div>
   </div>
 </div>
 
-<div class="done-overlay" id="doneOverlay">
-  <div class="done-card">
-    <span class="done-emoji" id="doneEmoji">🎉</span>
-    <div class="done-score" id="doneScore">0.000</div>
-    <div class="done-lbl" id="doneLbl">Episode Complete</div>
-    <div class="bdown" id="doneBd" style="justify-content:center;margin-bottom:12px;"></div>
-    <div class="save-form">
-      <input type="text" id="playerName" placeholder="Your name..." maxlength="32"/>
-      <button class="btn-save" onclick="saveScore()">Save</button>
-    </div>
-    <div class="done-btns">
-      <button class="btn-sec" onclick="closeDone()">Close</button>
-      <button class="btn-submit" style="width:auto;padding:9px 22px;" onclick="restartSame()">Play Again</button>
-    </div>
-  </div>
-</div>
-<div class="toast" id="toast"></div>
+<!-- TOAST NOTIFICATION -->
+<div class="toast-notif" id="toastNotif"></div>
 
 <script>
-// ═══════════════════════════════════════════════════
-// PURE CANVAS 3D BACKGROUND — no CDN needed
-// ═══════════════════════════════════════════════════
-(function(){
-  const c = document.getElementById('bgCanvas');
-  const ctx = c.getContext('2d');
-  let W, H;
-  function resize(){ W=c.width=window.innerWidth; H=c.height=window.innerHeight; }
-  resize(); window.addEventListener('resize', resize);
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const S = {
+  tasks: [],
+  selectedTask: null,
+  sessionId: null,
+  step: 0,
+  totalSteps: 0,
+  severity: null,
+  rewards: [],
+  timerStart: null,
+  timerInterval: null,
+  done: false,
+  lastObs: null,
+  taskConfig: null,
+};
 
-  // Nodes
-  const N = 90;
-  const nodes = Array.from({length:N}, ()=>({
-    x: Math.random()*W, y: Math.random()*H,
-    z: Math.random()*400+100,
-    vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
-    r: Math.random()*1.5+.5,
-    color: ['#00e5ff','#7c3aed','#00ff9d','#ff0080'][Math.floor(Math.random()*4)]
-  }));
-
-  // Mouse parallax
-  let mx=W/2, my=H/2;
-  window.addEventListener('mousemove', e=>{ mx=e.clientX; my=e.clientY; });
-
-  let frame=0;
-  function draw(){
-    requestAnimationFrame(draw);
-    ctx.clearRect(0,0,W,H);
-    frame++;
-
-    // Subtle radial gradient center glow
-    const grd = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*.6);
-    grd.addColorStop(0,'rgba(0,229,255,0.025)');
-    grd.addColorStop(1,'transparent');
-    ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
-
-    // Parallax offset
-    const ox=(mx-W/2)*.015, oy=(my-H/2)*.015;
-
-    // Move nodes
-    nodes.forEach(n=>{
-      n.x+=n.vx; n.y+=n.vy;
-      if(n.x<0||n.x>W) n.vx*=-1;
-      if(n.y<0||n.y>H) n.vy*=-1;
-    });
-
-    // Draw connections
-    for(let i=0;i<N;i++){
-      for(let j=i+1;j<N;j++){
-        const a=nodes[i], b=nodes[j];
-        const dx=a.x-b.x+ox, dy=a.y-b.y+oy;
-        const dist=Math.sqrt(dx*dx+dy*dy);
-        if(dist<130){
-          const alpha=(1-dist/130)*0.07;
-          ctx.beginPath();
-          ctx.moveTo(a.x+ox,a.y+oy);
-          ctx.lineTo(b.x+ox,b.y+oy);
-          ctx.strokeStyle=`rgba(0,229,255,${alpha})`;
-          ctx.lineWidth=.5;
-          ctx.stroke();
-        }
-      }
-    }
-
-    // Draw nodes
-    nodes.forEach(n=>{
-      const scale=300/n.z;
-      const px=n.x+ox, py=n.y+oy;
-      const r=n.r*scale*2;
-      // Glow
-      const g=ctx.createRadialGradient(px,py,0,px,py,r*3);
-      g.addColorStop(0,n.color.replace(')',',0.15)').replace('rgb','rgba').replace('#','rgba(').replace(/([0-9a-f]{2})/gi,(m,p)=>parseInt(p,16)+','));
-      // Simple glow
-      ctx.beginPath();
-      ctx.arc(px,py,r*2.5,0,Math.PI*2);
-      ctx.fillStyle=n.color+'18';
-      ctx.fill();
-      // Core dot
-      ctx.beginPath();
-      ctx.arc(px,py,Math.max(.5,r),0,Math.PI*2);
-      ctx.fillStyle=n.color+'cc';
-      ctx.fill();
-    });
-
-    // Floating hex grid lines (subtle)
-    if(frame%2===0){
-      ctx.strokeStyle='rgba(0,229,255,0.015)';
-      ctx.lineWidth=.5;
-      const size=60;
-      for(let x=-size;x<W+size;x+=size*1.5){
-        for(let y=-size;y<H+size;y+=size*Math.sqrt(3)){
-          const off=(Math.floor(y/(size*Math.sqrt(3)))%2)*size*.75;
-          ctx.beginPath();
-          for(let i=0;i<6;i++){
-            const angle=Math.PI/3*i;
-            const px2=x+off+size*Math.cos(angle);
-            const py2=y+size*Math.sin(angle);
-            i===0?ctx.moveTo(px2,py2):ctx.lineTo(px2,py2);
-          }
-          ctx.closePath();ctx.stroke();
-        }
-      }
-    }
-  }
-  draw();
-})();
-
-// ═══════════════════════════════════════════════════
-// STREAK CANVAS — 3D rotating wireframe cube
-// ═══════════════════════════════════════════════════
-(function(){
-  const c=document.getElementById('streakCanvas');
-  const ctx=c.getContext('2d');
-  let W=c.offsetWidth||300, H=70;
-  c.width=W; c.height=H;
-
-  let angle=0, streakVal=0;
-  const cx=W/2, cy=H/2;
-
-  // Cube vertices
-  function getCube(s){
-    return [
-      [-s,-s,-s],[s,-s,-s],[s,s,-s],[-s,s,-s],
-      [-s,-s,s],[s,-s,s],[s,s,s],[-s,s,s]
-    ];
-  }
-  const edges=[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
-
-  function project([x,y,z]){
-    const fov=200, d=fov/(fov+z+100);
-    return [cx+x*d, cy+y*d];
-  }
-
-  function rotY(v,a){ return [v[0]*Math.cos(a)-v[2]*Math.sin(a), v[1], v[0]*Math.sin(a)+v[2]*Math.cos(a)]; }
-  function rotX(v,a){ return [v[0], v[1]*Math.cos(a)-v[2]*Math.sin(a), v[1]*Math.sin(a)+v[2]*Math.cos(a)]; }
-
-  window._setStreak=function(v){ streakVal=v; };
-
-  function draw(){
-    requestAnimationFrame(draw);
-    ctx.clearRect(0,0,W,H);
-    angle+=0.018;
-    const s=12+Math.min(streakVal*2,18);
-    const color=streakVal>=5?'#ff2d55':streakVal>=3?'#ffe600':'#00e5ff';
-    const verts=getCube(s).map(v=>rotX(rotY(v,angle),angle*.7));
-    const proj=verts.map(project);
-    ctx.strokeStyle=color+'99';
-    ctx.lineWidth=1;
-    edges.forEach(([a,b])=>{
-      ctx.beginPath();ctx.moveTo(proj[a][0],proj[a][1]);ctx.lineTo(proj[b][0],proj[b][1]);ctx.stroke();
-    });
-    // Glow dots at vertices
-    proj.forEach(([px,py])=>{
-      ctx.beginPath();ctx.arc(px,py,1.5,0,Math.PI*2);
-      ctx.fillStyle=color;ctx.fill();
-    });
-  }
-  draw();
-})();
-
-// ═══════════════════════════════════════════════════
-// ANALYTICS BAR CHART
-// ═══════════════════════════════════════════════════
-const aData={};
-function drawAnalytics(){
-  const c=document.getElementById('analyticsCanvas');
-  const ctx=c.getContext('2d');
-  const W=c.offsetWidth||300, H=110;
-  c.width=W; c.height=H;
-  ctx.clearRect(0,0,W,H);
-  const entries=Object.entries(aData);
-  if(!entries.length){
-    ctx.fillStyle='rgba(61,80,104,0.5)';ctx.font='11px JetBrains Mono,monospace';
-    ctx.textAlign='center';ctx.fillText('No data yet',W/2,H/2);
-    document.getElementById('analyticsLabels').innerHTML='';return;
-  }
-  const bW=Math.min(36,(W-40)/entries.length-8);
-  const totalW=entries.length*(bW+10)-10;
-  let startX=(W-totalW)/2;
-  const labels=[];
-  entries.forEach(([team,v],i)=>{
-    const acc=v.total>0?v.correct/v.total:0;
-    const bH=Math.max(2,acc*(H-28));
-    const x=startX+i*(bW+10);
-    const y=H-bH-14;
-    // Bar gradient
-    const g=ctx.createLinearGradient(0,y,0,H-14);
-    g.addColorStop(0,'rgba(0,229,255,0.85)');
-    g.addColorStop(1,'rgba(124,58,237,0.4)');
-    ctx.fillStyle=g;
-    ctx.beginPath();
-    ctx.roundRect(x,y,bW,bH,3);
-    ctx.fill();
-    // Glow
-    ctx.shadowColor='rgba(0,229,255,0.4)';ctx.shadowBlur=8;
-    ctx.fill();ctx.shadowBlur=0;
-    // Pct label
-    ctx.fillStyle='rgba(0,229,255,0.9)';ctx.font='bold 9px JetBrains Mono,monospace';
-    ctx.textAlign='center';ctx.fillText(Math.round(acc*100)+'%',x+bW/2,y-3);
-    labels.push(`<span>${team.slice(0,4)}</span>`);
-  });
-  document.getElementById('analyticsLabels').innerHTML=labels.join('');
-}
-
-// ═══════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════
-const S={taskId:'easy',sessionId:null,started:false,step:0,total:0,severity:null,rewards:[],timerInterval:null,startTime:null,tasks:[],bestStreak:0};
-
-// ═══════════════════════════════════════════════════
-// TIMER
-// ═══════════════════════════════════════════════════
-function startTimer(){
-  S.startTime=Date.now();clearInterval(S.timerInterval);
-  S.timerInterval=setInterval(()=>{
-    const s=Math.floor((Date.now()-S.startTime)/1000);
-    document.getElementById('hdrTime').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-  },1000);
-}
-
-// ═══════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════
-async function loadTasks(){
-  try{
-    const d=await(await fetch('/tasks')).json();
-    S.tasks=d.tasks;renderTaskBar(d.tasks);loadLeaderboard();
-  }catch(e){showToast('⚠️ Cannot connect to server','bad');}
-}
-
-function renderTaskBar(tasks){
-  const bar=document.getElementById('taskBar');bar.innerHTML='';
-  tasks.forEach(t=>{
-    const b=document.createElement('button');b.className='task-btn'+(t.id===S.taskId?' active':'');
-    b.textContent=t.id.replace(/_/g,' ')+'  ('+t.alert_count+')';
-    b.onclick=()=>{S.taskId=t.id;document.querySelectorAll('.task-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');};
-    bar.appendChild(b);
-  });
-  const sb=document.createElement('button');sb.className='btn-start';sb.textContent='▶  Start Episode';sb.onclick=startEpisode;
-  bar.appendChild(sb);
-}
-
-// ═══════════════════════════════════════════════════
-// START
-// ═══════════════════════════════════════════════════
-async function startEpisode(){
-  S.sessionId='sess_'+Date.now();S.rewards=[];S.step=0;
-  document.getElementById('timeline').innerHTML='<div class="empty"><span class="ei">⏳</span>No actions yet</div>';
-  document.getElementById('resultBox').className='result-box';
-  document.getElementById('hintBox').className='hint-box';
-  document.getElementById('autopsyCard').style.display='none';
-  document.getElementById('hdrStatus').textContent='Running';
-  Object.keys(aData).forEach(k=>delete aData[k]);drawAnalytics();
-  try{
-    const obs=await(await fetch('/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_id:S.taskId,session_id:S.sessionId})})).json();
-    S.total=obs.total_steps;S.step=obs.step;S.started=true;
-    renderAlert(obs);updateProgress(obs.step,obs.total_steps);enableForm(true);startTimer();
-    showToast('🚀 Episode started — '+S.taskId,'ok');loadLeaderboard();
-  }catch(e){showToast('❌ Failed: '+e.message,'bad');}
-}
-
-// ═══════════════════════════════════════════════════
-// RENDER ALERT
-// ═══════════════════════════════════════════════════
-function renderAlert(obs){
-  const box=document.getElementById('alertBox');
-  if(!obs||!obs.alert){box.innerHTML='<div class="empty"><span class="ei">✅</span>Episode complete!</div>';return;}
-  const a=obs.alert;
-  const ts=a.timestamp?new Date(a.timestamp).toLocaleString():'';
-  box.innerHTML=`
-    <div class="a-src"><div class="a-src-dot"></div>${a.source||'System'} &nbsp;·&nbsp; <span style="color:#4a6080">${ts}</span></div>
-    <div class="a-title">${a.title||'Alert'}</div>
-    <div class="a-body">${(a.body||'').replace(/\n/g,'<br>')}</div>
-    <div class="a-tags">
-      <span class="tag tag-step">Step ${obs.step+1} / ${obs.total_steps}</span>
-      <span class="tag tag-task">${obs.task_id}</span>
-      ${obs.persona?`<span class="tag tag-persona">${obs.persona}</span>`:''}
-    </div>
-    ${obs.cascading_context?`<div class="cascade">🔗 ${obs.cascading_context}</div>`:''}
-  `;
-  box.classList.remove('flash');void box.offsetWidth;box.classList.add('flash');
-  const task=S.tasks.find(t=>t.id===S.taskId);
-  const fields=task?task.grade_fields:[];
-  document.getElementById('statusRow').style.display=fields.includes('status_update')?'flex':'none';
-  document.getElementById('fpRow').style.display=fields.includes('false_positive')?'flex':'none';
-  document.getElementById('hintBtn').style.display='inline-block';
-  document.getElementById('hintBox').className='hint-box';
-}
-
-// ═══════════════════════════════════════════════════
-// PROGRESS
-// ═══════════════════════════════════════════════════
-function updateProgress(step,total){
-  const pct=total>0?Math.round((step/total)*100):0;
-  document.getElementById('progBar').style.width=pct+'%';
-  document.getElementById('progLabel').textContent='Step '+step+' / '+total;
-  document.getElementById('progPct').textContent=pct+'%';
-}
-
-// ═══════════════════════════════════════════════════
-// SEVERITY
-// ═══════════════════════════════════════════════════
-function setSev(sev){
-  S.severity=sev;
-  document.querySelectorAll('.sev-btn').forEach(b=>{b.className='sev-btn'+(b.dataset.sev===sev?' s-'+sev:'');});
-}
-
-// ═══════════════════════════════════════════════════
-// SUBMIT
-// ═══════════════════════════════════════════════════
-async function doSubmit(e){
-  if(!S.started||!S.severity){showToast('⚠️ Select a severity first','partial');return;}
-  const btn=document.getElementById('submitBtn');
-  const rect=btn.getBoundingClientRect();
-  const rip=document.createElement('span');rip.className='ripple';
-  rip.style.cssText=`width:${rect.width*2}px;height:${rect.width*2}px;left:${e.clientX-rect.left-rect.width}px;top:${e.clientY-rect.top-rect.width}px;`;
-  btn.appendChild(rip);setTimeout(()=>rip.remove(),700);
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
-  const payload={severity:S.severity,incident_type:document.getElementById('incType').value,team:document.getElementById('team').value,session_id:S.sessionId};
-  const su=document.getElementById('statusUpdate').value.trim();if(su)payload.status_update=su;
-  const fp=document.getElementById('fpCheck');if(fp.offsetParent)payload.is_false_positive=fp.checked;
-  try{
-    const d=await(await fetch('/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})).json();
-    S.rewards.push(d.reward.value);S.step++;
-    renderResult(d);updateStreak(d.streak);addTL(d);updateProgress(S.step,S.total);updateAnalytics(d);
-    if(d.done){
-      clearInterval(S.timerInterval);S.started=false;enableForm(false);
-      document.getElementById('hdrStatus').textContent='Done';
-      setTimeout(()=>showDone(),600);setTimeout(()=>loadAutopsy(),900);
-    }else if(d.observation){
-      renderAlert(d.observation);
-      document.getElementById('statusUpdate').value='';
-      document.getElementById('fpCheck').checked=false;
-      document.getElementById('hintBox').className='hint-box';
-    }
-  }catch(err){showToast('❌ '+err.message,'bad');}
-  finally{btn.disabled=false;btn.textContent='Submit Triage';}
-}
-
-// ═══════════════════════════════════════════════════
-// RESULT
-// ═══════════════════════════════════════════════════
-function renderResult(d){
-  const box=document.getElementById('resultBox');
-  const rv=d.reward.value;
-  const cls=rv>=0.99?'good':rv>=0.5?'partial':'bad';
-  const emoji=rv>=0.99?'✅':rv>=0.5?'⚠️':'❌';
-  const bd=d.reward.breakdown||{};
-  const chips=Object.entries(bd).map(([k,v])=>{
-    const c=v>=0.99?'ok':v>0?'half':'fail';
-    return `<span class="bc ${c}">${v>=0.99?'✓':v>0?'~':'✗'} ${k}</span>`;
-  }).join('');
-  box.innerHTML=`<div class="res-score">${emoji} ${rv.toFixed(2)}</div><div class="bdown">${chips}</div>`;
-  box.className='result-box show '+cls;
-}
-
-// ═══════════════════════════════════════════════════
-// STREAK
-// ═══════════════════════════════════════════════════
-function updateStreak(s){
-  const el=document.getElementById('streakNum');
-  el.textContent=s;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');
-  if(window._setStreak)window._setStreak(s);
-  if(s>S.bestStreak){S.bestStreak=s;document.getElementById('streakBest').textContent='Best: '+s;}
-}
-
-// ═══════════════════════════════════════════════════
-// TIMELINE
-// ═══════════════════════════════════════════════════
-function addTL(d){
-  const tl=document.getElementById('timeline');
-  if(tl.querySelector('.empty'))tl.innerHTML='';
-  const rv=d.reward.value;
-  const cls=rv>=0.99?'ok':rv>=0.5?'half':'fail';
-  const title=d.observation?.alert?.title||('Step '+S.step);
-  const item=document.createElement('div');item.className='tl-item';
-  item.innerHTML=`<div class="tl-dot ${cls}"></div><div class="tl-title">${title}</div><div class="tl-score">${rv.toFixed(2)}</div>`;
-  tl.insertBefore(item,tl.firstChild);
-}
-
-// ═══════════════════════════════════════════════════
-// ANALYTICS
-// ═══════════════════════════════════════════════════
-function updateAnalytics(d){
-  const team=document.getElementById('team').value;
-  if(!aData[team])aData[team]={correct:0,total:0};
-  aData[team].total++;
-  if((d.reward.breakdown?.team||0)>=1)aData[team].correct++;
-  drawAnalytics();
-}
-
-// ═══════════════════════════════════════════════════
-// HINT
-// ═══════════════════════════════════════════════════
-async function loadHint(){
-  try{
-    const d=await(await fetch('/hint')).json();
-    document.getElementById('hintBox').textContent='💡 '+d.hint;
-    document.getElementById('hintBox').className='hint-box show';
-  }catch(e){}
-}
-
-// ═══════════════════════════════════════════════════
-// AUTOPSY
-// ═══════════════════════════════════════════════════
-async function loadAutopsy(){
-  try{
-    const d=await(await fetch('/autopsy?session_id='+S.sessionId)).json();
-    if(d.message)return;
-    const card=document.getElementById('autopsyCard');
-    const content=document.getElementById('autopsyContent');
-    let html=`<div class="autopsy-header">
-      <div class="astat grade"><div class="astat-val">${d.grade}</div><div class="astat-lbl">Grade</div></div>
-      <div class="astat score"><div class="astat-val">${d.mean_reward.toFixed(3)}</div><div class="astat-lbl">Mean Reward</div></div>
-      <div class="astat err"><div class="astat-val">${d.mistake_steps}</div><div class="astat-lbl">Mistakes</div></div>
-    </div>
-    <div class="verdict">${d.verdict}</div>`;
-    if(d.mistakes.length){
-      html+='<div style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">What went wrong</div>';
-      d.mistakes.forEach(m=>{
-        html+=`<div class="a-item bad">
-          <div class="a-item-title">Step ${m.step}: ${m.title}</div>
-          <div class="a-item-reason">${m.what_went_wrong.join(' · ')}</div>
-          ${m.how_to_fix.length?`<div class="a-item-fix">→ ${m.how_to_fix.join(' · ')}</div>`:''}
-        </div>`;
-      });
-    }
-    if(d.perfect.length){
-      html+='<div style="font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin:10px 0 8px;">Perfect calls</div>';
-      d.perfect.forEach(p=>{html+=`<div class="a-item ok"><div class="a-item-title">✓ ${p.title}</div></div>`;});
-    }
-    content.innerHTML=html;
-    card.style.display='block';
-    setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),200);
-  }catch(e){}
-}
-
-// ═══════════════════════════════════════════════════
-// DONE
-// ═══════════════════════════════════════════════════
-function showDone(){
-  const mean=S.rewards.length?S.rewards.reduce((a,b)=>a+b,0)/S.rewards.length:0;
-  document.getElementById('doneEmoji').textContent=mean>=0.9?'🏆':mean>=0.7?'🎯':mean>=0.5?'📈':'💪';
-  document.getElementById('doneScore').textContent=mean.toFixed(3);
-  document.getElementById('doneLbl').textContent=`Mean reward over ${S.rewards.length} alerts`;
-  document.getElementById('doneOverlay').className='done-overlay show';
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  loadTasks();
   loadLeaderboard();
-}
-function closeDone(){document.getElementById('doneOverlay').className='done-overlay';}
-function restartSame(){closeDone();startEpisode();}
+});
 
-// ═══════════════════════════════════════════════════
-// SAVE SCORE
-// ═══════════════════════════════════════════════════
-async function saveScore(){
-  const name=document.getElementById('playerName').value.trim();
-  if(!name){showToast('Enter your name first','partial');return;}
-  const mean=S.rewards.reduce((a,b)=>a+b,0)/S.rewards.length;
-  const grade=mean>=0.95?'S':mean>=0.8?'A':mean>=0.65?'B':mean>=0.5?'C':'D';
-  try{
-    await fetch('/leaderboard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,task_id:S.taskId,score:mean,grade,steps:S.rewards.length})});
-    showToast('🏆 Score saved!','ok');loadLeaderboard();closeDone();
-  }catch(e){showToast('Failed to save','bad');}
+// ─── TASKS ────────────────────────────────────────────────────────────────────
+async function loadTasks() {
+  try {
+    const r = await fetch('/tasks');
+    const data = await r.json();
+    S.tasks = Array.isArray(data) ? data : (data.tasks || []);
+    renderTaskCards();
+  } catch(e) {
+    document.getElementById('taskCards').innerHTML =
+      '<div style="color:var(--red);padding:1rem">Failed to load tasks. Is the server running?</div>';
+  }
 }
 
-// ═══════════════════════════════════════════════════
-// LEADERBOARD
-// ═══════════════════════════════════════════════════
-async function loadLeaderboard(){
-  try{
-    const d=await(await fetch('/leaderboard?limit=5')).json();
-    const el=document.getElementById('leaderboard');
-    if(!d.entries.length){el.innerHTML='<div class="empty"><span class="ei">🏅</span>No scores yet</div>';return;}
-    el.innerHTML=d.entries.map((e,i)=>{
-      const rc=i===0?'g':i===1?'s':i===2?'b':'';
-      const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
-      return `<div class="lb-row"><div class="lb-rank ${rc}">${medal}</div><div class="lb-name">${e.name}</div><span class="lb-grade">${e.grade}</span><div class="lb-score">${e.score.toFixed(3)}</div></div>`;
-    }).join('');
-  }catch(e){}
+function difficultyStars(task) {
+  const n = task.alert_count || 5;
+  const stars = n <= 5 ? 2 : n <= 10 ? 3 : 4;
+  return '★'.repeat(stars) + '☆'.repeat(5 - stars);
 }
 
-// ═══════════════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════════════
-function enableForm(on){
-  document.getElementById('submitBtn').disabled=!on;
-  document.querySelectorAll('.sev-btn,#incType,#team,#statusUpdate,#fpCheck').forEach(el=>el.disabled=!on);
-}
-let toastTimer;
-function showToast(msg,type){
-  const t=document.getElementById('toast');t.textContent=msg;
-  t.style.borderColor=type==='ok'?'rgba(0,255,157,.3)':type==='bad'?'rgba(255,45,85,.3)':'rgba(255,230,0,.3)';
-  t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3000);
+function renderTaskCards() {
+  const el = document.getElementById('taskCards');
+  if (!S.tasks.length) {
+    el.innerHTML = '<div style="color:var(--muted);padding:1rem">No tasks found.</div>';
+    return;
+  }
+  el.innerHTML = S.tasks.map(t => {
+    const fields = (t.grade_fields || []).slice(0, 4);
+    const chips = fields.map(f => `<span class="chip">${f}</span>`).join('');
+    return `
+    <div class="task-card" id="tc-${t.id}" onclick="selectTask('${t.id}')">
+      <div class="task-card-header">
+        <div class="task-name">${formatTaskName(t.id)}</div>
+        <span class="alert-badge">${t.alert_count} alerts</span>
+      </div>
+      <div class="stars">${difficultyStars(t)}</div>
+      <div class="grade-chips">${chips}</div>
+      <button class="btn-play" onclick="event.stopPropagation();selectTask('${t.id}');startEpisode()">▶ Play</button>
+    </div>`;
+  }).join('');
 }
 
-// ═══════════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════════
-loadTasks();
-setInterval(drawAnalytics,3000);
+function formatTaskName(id) {
+  return id.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function selectTask(id) {
+  S.selectedTask = id;
+  document.querySelectorAll('.task-card').forEach(c => c.classList.remove('selected'));
+  const el = document.getElementById('tc-' + id);
+  if (el) el.classList.add('selected');
+}
+
+// ─── EPISODE ──────────────────────────────────────────────────────────────────
+async function startEpisode() {
+  if (!S.selectedTask) { showToast('Please select a task first', 'warn'); return; }
+  S.sessionId = 'sess_' + Date.now();
+  S.rewards = [];
+  S.step = 0;
+  S.severity = null;
+  S.done = false;
+  document.getElementById('timeline').innerHTML = '';
+  document.getElementById('hintBox').style.display = 'none';
+  clearSevButtons();
+
+  try {
+    const r = await fetch('/reset', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({task_id: S.selectedTask, session_id: S.sessionId})
+    });
+    const obs = await r.json();
+    S.lastObs = obs;
+    S.totalSteps = obs.total_steps || 10;
+    S.step = obs.step || 0;
+    S.taskConfig = obs;
+
+    // Show triage, hide hero
+    document.getElementById('hero').style.display = 'none';
+    document.getElementById('triageSection').style.display = 'block';
+    document.getElementById('autopsySection').style.display = 'none';
+    document.getElementById('triageSection').scrollIntoView({behavior:'smooth'});
+
+    document.getElementById('triageTaskName').textContent = formatTaskName(S.selectedTask);
+    document.getElementById('triagePersona').textContent = obs.persona ? '👤 ' + obs.persona : '';
+
+    // Show/hide optional fields based on task
+    const hasStatus = (obs.grade_fields || []).includes('status_update');
+    const hasAdv = (obs.grade_fields || []).includes('is_false_positive');
+    document.getElementById('statusGroup').style.display = hasStatus ? 'block' : 'none';
+    document.getElementById('fpRow').style.display = hasAdv ? 'flex' : 'none';
+
+    renderAlert(obs);
+    startTimer();
+    updateProgress();
+  } catch(e) {
+    showToast('Failed to start episode: ' + e.message, 'error');
+  }
+}
+
+function renderAlert(obs) {
+  const alert = obs.observation || obs.alert || obs;
+  const card = document.getElementById('alertCard');
+
+  // Severity color border
+  const sevColors = {P1:'#ef4444',P2:'#f97316',P3:'#f59e0b',P4:'#10b981'};
+  const sev = (alert.severity || '').toUpperCase();
+  card.style.borderLeftColor = sevColors[sev] || 'var(--purple)';
+
+  // Animate
+  card.style.animation = 'none';
+  card.offsetHeight; // reflow
+  card.style.animation = 'slideIn .4s ease';
+
+  document.getElementById('alertSource').textContent = alert.source || '—';
+  document.getElementById('alertTs').textContent = alert.timestamp ? new Date(alert.timestamp).toLocaleString() : '—';
+  document.getElementById('alertId').textContent = alert.id ? '#' + alert.id : '';
+  document.getElementById('alertTitle').textContent = alert.title || 'Untitled Alert';
+  document.getElementById('alertBody').textContent = alert.body || '';
+
+  // Persona
+  if (obs.persona) {
+    document.getElementById('personaBox').style.display = 'block';
+    document.getElementById('personaText').textContent = obs.persona;
+  } else {
+    document.getElementById('personaBox').style.display = 'none';
+  }
+
+  // Cascading context
+  if (obs.cascading_context) {
+    document.getElementById('cascadeBox').style.display = 'block';
+    document.getElementById('cascadeText').textContent = obs.cascading_context;
+  } else {
+    document.getElementById('cascadeBox').style.display = 'none';
+  }
+
+  document.getElementById('hintBox').style.display = 'none';
+  clearSevButtons();
+  document.getElementById('submitBtn').disabled = false;
+}
+
+function updateProgress() {
+  const pct = S.totalSteps > 0 ? Math.round((S.step / S.totalSteps) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `Step ${S.step} of ${S.totalSteps}`;
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('statStep').textContent = S.step;
+}
+
+// ─── SEVERITY ─────────────────────────────────────────────────────────────────
+function setSev(sev) {
+  S.severity = sev;
+  document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('active'));
+  const map = {P1:'.sev-p1',P2:'.sev-p2',P3:'.sev-p3',P4:'.sev-p4'};
+  const btn = document.querySelector(map[sev]);
+  if (btn) btn.classList.add('active');
+}
+
+function clearSevButtons() {
+  S.severity = null;
+  document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('active'));
+}
+
+// ─── SUBMIT ───────────────────────────────────────────────────────────────────
+async function doSubmit() {
+  if (!S.severity) { showToast('Please select a severity level', 'warn'); return; }
+  const incType = document.getElementById('incidentType').value;
+  const team = document.getElementById('teamSelect').value;
+  if (!incType) { showToast('Please select an incident type', 'warn'); return; }
+  if (!team) { showToast('Please select a team', 'warn'); return; }
+
+  document.getElementById('submitBtn').disabled = true;
+
+  const body = {
+    severity: S.severity,
+    incident_type: incType,
+    team: team,
+    session_id: S.sessionId,
+  };
+
+  const statusEl = document.getElementById('statusUpdate');
+  if (document.getElementById('statusGroup').style.display !== 'none' && statusEl.value.trim()) {
+    body.status_update = statusEl.value.trim();
+  }
+  const fpEl = document.getElementById('isFalsePositive');
+  if (document.getElementById('fpRow').style.display !== 'none') {
+    body.is_false_positive = fpEl.checked;
+  }
+
+  try {
+    const r = await fetch('/step', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+
+    const reward = data.reward?.value ?? data.reward ?? 0;
+    S.rewards.push(reward);
+    S.step++;
+
+    // Timeline dot
+    addTimeline({sev: S.severity, reward, step: S.step});
+
+    // Show result toast
+    showResultToast(data);
+
+    // Update stats
+    updateStats(data);
+
+    if (data.done || S.step >= S.totalSteps) {
+      S.done = true;
+      setTimeout(() => showDone(data), 1200);
+    } else {
+      // Next alert
+      if (data.observation) {
+        S.lastObs = data.observation;
+        setTimeout(() => renderAlert(data.observation), 600);
+      }
+      updateProgress();
+    }
+
+    // Reset form
+    document.getElementById('incidentType').value = '';
+    document.getElementById('teamSelect').value = '';
+    if (statusEl) statusEl.value = '';
+    if (fpEl) fpEl.checked = false;
+
+  } catch(e) {
+    showToast('Submit failed: ' + e.message, 'error');
+    document.getElementById('submitBtn').disabled = false;
+  }
+}
+
+// ─── RESULT TOAST ─────────────────────────────────────────────────────────────
+function showResultToast(data) {
+  const toast = document.getElementById('resultToast');
+  const reward = data.reward?.value ?? data.reward ?? 0;
+  const breakdown = data.reward?.breakdown || {};
+
+  document.getElementById('toastScore').textContent = (reward >= 0 ? '+' : '') + reward.toFixed(2);
+  document.getElementById('toastScore').style.color = reward >= 0 ? 'var(--green)' : 'var(--red)';
+  toast.style.borderLeftColor = reward >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const chips = Object.entries(breakdown).map(([k, v]) => {
+    const ok = v > 0;
+    return `<span class="toast-chip ${ok ? 'chip-ok' : 'chip-bad'}">${ok ? '✓' : '✗'} ${k.replace(/_/g,' ')}</span>`;
+  }).join('');
+  document.getElementById('toastBreakdown').innerHTML = chips;
+
+  const info = data.info || {};
+  document.getElementById('toastExplain').textContent = info.explanation || info.message || '';
+
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+// ─── TIMELINE ─────────────────────────────────────────────────────────────────
+function addTimeline(d) {
+  const tl = document.getElementById('timeline');
+  const colors = {P1:'#ef4444',P2:'#f97316',P3:'#f59e0b',P4:'#10b981'};
+  const col = colors[d.sev] || '#8b5cf6';
+  const item = document.createElement('div');
+  item.className = 'tl-item';
+  item.style.minWidth = '60px';
+  item.innerHTML = `
+    <div class="tl-dot" style="background:${col}" title="Step ${d.step}: ${d.sev} | Reward: ${d.reward?.toFixed(2)}">
+      <div class="tl-sev">${d.sev}</div>
+    </div>
+    <div class="tl-label">${d.reward >= 0 ? '+' : ''}${(d.reward||0).toFixed(1)}</div>`;
+  tl.appendChild(item);
+  tl.scrollLeft = tl.scrollWidth;
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function updateStats(data) {
+  const mean = S.rewards.length ? S.rewards.reduce((a,b)=>a+b,0)/S.rewards.length : 0;
+  animateNumber('statReward', mean.toFixed(2));
+
+  if (data.streak !== undefined) updateStreak(data.streak);
+  else loadStreak();
+}
+
+function updateStreak(s) {
+  const val = typeof s === 'object' ? (s.current_streak ?? s) : s;
+  document.getElementById('statStreak').textContent = '🔥 ' + val;
+}
+
+async function loadStreak() {
+  try {
+    const r = await fetch('/streak');
+    const d = await r.json();
+    updateStreak(d.current_streak || 0);
+  } catch(e) {}
+}
+
+function animateNumber(id, target) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = target;
+}
+
+// ─── TIMER ────────────────────────────────────────────────────────────────────
+function startTimer() {
+  S.timerStart = Date.now();
+  if (S.timerInterval) clearInterval(S.timerInterval);
+  S.timerInterval = setInterval(() => {
+    const s = Math.floor((Date.now() - S.timerStart) / 1000);
+    document.getElementById('statTimer').textContent = s + 's';
+  }, 1000);
+}
+
+function stopTimer() {
+  if (S.timerInterval) { clearInterval(S.timerInterval); S.timerInterval = null; }
+}
+
+// ─── HINT ─────────────────────────────────────────────────────────────────────
+async function loadHint() {
+  const box = document.getElementById('hintBox');
+  box.style.display = 'block';
+  box.textContent = 'Loading hint…';
+  try {
+    const r = await fetch('/hint');
+    const d = await r.json();
+    box.textContent = '💡 ' + (d.hint || 'No hint available.');
+  } catch(e) {
+    box.textContent = 'Could not load hint.';
+  }
+}
+
+// ─── DONE / MODAL ─────────────────────────────────────────────────────────────
+async function showDone(data) {
+  stopTimer();
+  const mean = S.rewards.length ? S.rewards.reduce((a,b)=>a+b,0)/S.rewards.length : 0;
+
+  // Try autopsy
+  let grade = data.info?.grade || gradeFromMean(mean);
+  let verdict = data.info?.verdict || 'Episode complete!';
+
+  try {
+    const r = await fetch('/autopsy?session_id=' + S.sessionId);
+    const ap = await r.json();
+    grade = ap.grade || grade;
+    verdict = ap.verdict || verdict;
+    renderAutopsy(ap, mean);
+  } catch(e) {}
+
+  document.getElementById('modalGrade').textContent = grade;
+  document.getElementById('modalGrade').className = 'modal-grade grade-' + grade.toLowerCase();
+  document.getElementById('modalScore').textContent = mean.toFixed(3);
+  document.getElementById('modalVerdict').textContent = verdict;
+
+  spawnConfetti();
+  document.getElementById('doneModal').classList.add('show');
+}
+
+function gradeFromMean(m) {
+  if (m >= 0.9) return 'S';
+  if (m >= 0.75) return 'A';
+  if (m >= 0.55) return 'B';
+  if (m >= 0.35) return 'C';
+  return 'D';
+}
+
+function closeDoneModal() {
+  document.getElementById('doneModal').classList.remove('show');
+  showAutopsy();
+}
+
+async function saveScore() {
+  const name = document.getElementById('playerName').value.trim() || 'Anonymous';
+  const mean = S.rewards.length ? S.rewards.reduce((a,b)=>a+b,0)/S.rewards.length : 0;
+  const grade = gradeFromMean(mean);
+  try {
+    await fetch('/leaderboard', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, task_id: S.selectedTask, score: mean, grade, steps: S.step})
+    });
+    showToast('Score saved! 🏆', 'success');
+    loadLeaderboard();
+  } catch(e) {
+    showToast('Could not save score', 'error');
+  }
+  closeDoneModal();
+}
+
+// ─── AUTOPSY ──────────────────────────────────────────────────────────────────
+async function loadAutopsy() {
+  try {
+    const r = await fetch('/autopsy?session_id=' + S.sessionId);
+    const ap = await r.json();
+    const mean = S.rewards.length ? S.rewards.reduce((a,b)=>a+b,0)/S.rewards.length : 0;
+    renderAutopsy(ap, mean);
+  } catch(e) {}
+}
+
+function renderAutopsy(ap, mean) {
+  const grade = ap.grade || gradeFromMean(mean);
+  document.getElementById('autopsyGrade').textContent = grade;
+  document.getElementById('autopsyGrade').className = 'grade-display grade-' + grade.toLowerCase();
+  document.getElementById('autopsyScore').textContent = (ap.mean_reward ?? mean).toFixed(3);
+  document.getElementById('autopsyVerdict').textContent = ap.verdict || '';
+
+  // Perfect
+  const perfEl = document.getElementById('autopsyPerfect');
+  if (ap.perfect && ap.perfect.length) {
+    perfEl.innerHTML = '<div style="font-size:1rem;font-weight:700;margin-bottom:.8rem;color:var(--green)">✅ Perfect Decisions</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:.6rem">' +
+      ap.perfect.map(p => `<div class="perfect-card"><div class="perfect-title">✓ ${p.title || p}</div></div>`).join('') +
+      '</div>';
+  } else {
+    perfEl.innerHTML = '';
+  }
+
+  // Mistakes
+  const mistEl = document.getElementById('autopsyMistakes');
+  if (ap.mistakes && ap.mistakes.length) {
+    mistEl.innerHTML = ap.mistakes.map(m => `
+      <div class="mistake-card">
+        <div class="mistake-title">Step ${m.step || '?'}: ${m.title || 'Mistake'}</div>
+        <div class="mistake-wrong">✗ ${m.what_went_wrong || ''}</div>
+        <div class="mistake-fix">→ ${m.how_to_fix || ''}</div>
+      </div>`).join('');
+  } else {
+    mistEl.innerHTML = '<div style="color:var(--green);font-weight:600">No mistakes recorded!</div>';
+  }
+}
+
+function showAutopsy() {
+  document.getElementById('autopsySection').style.display = 'block';
+  document.getElementById('autopsySection').scrollIntoView({behavior:'smooth'});
+}
+
+// ─── LEADERBOARD ──────────────────────────────────────────────────────────────
+async function loadLeaderboard() {
+  try {
+    const r = await fetch('/leaderboard?limit=10');
+    const d = await r.json();
+    const entries = d.entries || d || [];
+    renderLeaderboard(entries);
+  } catch(e) {
+    document.getElementById('lbBody').innerHTML =
+      '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Could not load leaderboard.</td></tr>';
+  }
+}
+
+function renderLeaderboard(entries) {
+  const medals = ['🥇','🥈','🥉'];
+  const tbody = document.getElementById('lbBody');
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem">No scores yet. Be the first!</td></tr>';
+    return;
+  }
+  tbody.innerHTML = entries.map((e, i) => {
+    const cls = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+    const medal = medals[i] || (i + 1);
+    const g = (e.grade || 'D').toUpperCase();
+    const gpCls = {S:'gp-s',A:'gp-a',B:'gp-b',C:'gp-c',D:'gp-d'}[g] || 'gp-d';
+    return `<tr class="${cls}">
+      <td><span class="rank-medal">${medal}</span></td>
+      <td class="fw-bold">${e.name || 'Anonymous'}</td>
+      <td>${formatTaskName(e.task_id || e.task || '—')}</td>
+      <td class="fw-bold" style="color:var(--purple)">${(e.score||0).toFixed(3)}</td>
+      <td><span class="grade-pill ${gpCls}">${g}</span></td>
+      <td>${e.steps || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── CONFETTI ─────────────────────────────────────────────────────────────────
+function spawnConfetti() {
+  const wrap = document.getElementById('confettiWrap');
+  wrap.innerHTML = '';
+  const colors = ['#6d28d9','#10b981','#f59e0b','#ef4444','#8b5cf6','#3b82f6'];
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.cssText = `
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-delay:${Math.random()*2}s;
+      animation-duration:${2+Math.random()*2}s;
+      width:${6+Math.random()*8}px;
+      height:${6+Math.random()*8}px;
+      border-radius:${Math.random()>0.5?'50%':'2px'};
+    `;
+    wrap.appendChild(p);
+  }
+}
+
+// ─── TOAST NOTIFICATION ───────────────────────────────────────────────────────
+function showToast(msg, type='info') {
+  const el = document.getElementById('toastNotif');
+  el.textContent = msg;
+  el.style.background = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : type === 'warn' ? '#f59e0b' : '#1f2937';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ─── EXIT / RESTART ───────────────────────────────────────────────────────────
+function exitTriage() {
+  stopTimer();
+  document.getElementById('triageSection').style.display = 'none';
+  document.getElementById('autopsySection').style.display = 'none';
+  document.getElementById('hero').style.display = 'flex';
+  document.getElementById('hero').scrollIntoView({behavior:'smooth'});
+}
+
+function restartFromAutopsy() {
+  document.getElementById('autopsySection').style.display = 'none';
+  document.getElementById('hero').style.display = 'flex';
+  document.getElementById('tasks-section').scrollIntoView({behavior:'smooth'});
+}
 </script>
 </body>
 </html>
